@@ -92,7 +92,9 @@ Define a Storybook **global** `brand` with 3 values (`default`, `school`, `healt
 
 > **Verified:** `ThemeProvider` signature is `React.FC<{ children: React.ReactNode }>` — confirmed no `brand` prop. `useTheme()` returns `{ currentTheme, setTheme, theme }`. Components like `Select`, `Radio`, `Progress`, `StepIndicator` call `useTheme()` at top level, so they **must** be inside `<ThemeProvider>` — the decorator guarantees this for stories; tests must wrap explicitly.
 
-### `.storybook/preview.ts`
+### `.storybook/preview.tsx`
+
+> **Note:** file extension is `.tsx`, not `.ts` — this file contains JSX (the `<ThemeSync>` and `<Story />` elements in the decorator), so `.ts` would fail Vite's JSX transform.
 
 ```ts
 import type { Preview } from '@storybook/react';
