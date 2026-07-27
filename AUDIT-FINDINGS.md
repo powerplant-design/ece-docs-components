@@ -1,8 +1,54 @@
 # Accessibility Audit Findings — ece-docs-components
 
-**Audit date:** 28 Jul 2026
-**Audited commit (master):** `4f997c4` (Initial commit)
+**Audit date:** 28 Jul 2026 (initial — see revision history below)
+**Audited commit (master):** `4f997c4` (Initial commit, 2025-10-08, version `1.0.1`)
 **Method:** Storybook 10 + `@storybook/addon-a11y` (axe-core 4.x) — automated checks against the rendered DOM of each of the 22 components across all 3 brand themes (default / school / health).
+
+---
+
+## ⚠ Critical Caveat: Audit is against stale repo source, NOT production
+
+During the audit we visually compared Storybook against the live production site (`https://theme.lightn.co.nz/governance/te-tiriti/requirements`) — a consumer of this library — and found significant divergence. The findings below describe **repo source at version `1.0.1`** (the only commit on `master`, dated Oct 2025), but production is running a much newer version.
+
+### Evidence the live site uses a different/newer version
+
+The `Concertina` component on the live site differs in three concrete ways from `src/components/Concertina.tsx` in this repo:
+
+| Aspect | Repo source (`1.0.1`) | Live site (`theme.lightn.co.nz`) |
+|---|---|---|
+| Chevron icon | `ExpandMoreRounded` — plain chevron (`Concertina.tsx:3`) | `ExpandCircleDownRounded` — chevron inside a circle (per inspected SVG path) |
+| Title prefix | None — title is plain text | Always-visible `<span>#</span>` before the title |
+| Hover interaction | `LinkRounded` icon button appears on hover with "Copy link" tooltip (`Concertina.tsx:180-194`) | No link icon, no copy-link feature — the `#` is decorative |
+
+### Why this happened
+
+- The git repo (`github.com/RedSunMaster/ece-docs-components`) has only **one commit** (`4f997c4`, "Initial commit").
+- The npm package `ece-docs-components` has been published **108 times**: `1.0.0` → `1.0.107` (latest). The author has been pushing versions directly to npm without synchronizing source back to GitHub.
+- The live site consumes a recent npm version (likely `1.0.107`). The repo source is ~10 months and 106 versions behind production.
+
+### Implication for these findings
+
+The 5 violations documented below are against code that **may not match production**. Some may:
+1. Already be fixed in newer versions
+2. Still exist (carried through all 107 versions)
+3. Have been replaced by different/new violations we haven't measured yet
+
+**Treat these findings as a baseline of the repo state, not as a definitive audit of `theme.lightn.co.nz`.**
+
+### Path forward (pending — not yet executed)
+
+1. Re-run the audit against the **published npm package** (`ece-docs-components@1.0.107`) instead of local source — by installing from npm and removing the Vite/Vitest `ece-docs-components` → `src` alias.
+2. Request read access to the actual current source from the repo owner (Richard McNulty / RedSunMaster) for a definitive source-level audit.
+3. Update this document with a v2 audit once the npm-based findings are available.
+
+### Revision history
+
+| Date | Revision | Notes |
+|---|---|---|
+| 28 Jul 2026 | v1 — repo source audit | Initial findings against git `master` at `4f997c4` (npm `1.0.1`). Caveat above added same day after discovering source/production drift. |
+| (pending) | v2 — npm package audit | Will re-run against `ece-docs-components@^1.0.107` from npm registry. |
+
+---
 
 ## Summary
 

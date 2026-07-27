@@ -1,5 +1,41 @@
 # Plan: Storybook Design System with A11y Testing (Inside-Repo)
 
+## ⚠ Critical Context: Source vs Production Drift (added 28 Jul 2026)
+
+**The git repo does NOT match what's running in production.** This affects the validity of any audit run against the repo source.
+
+### Findings (discovered while running Storybook locally)
+
+- **Git repo:** single commit `4f997c4` "Initial commit" dated 2025-10-08 — version `1.0.1`. No other commits, no tags, no other branches upstream.
+- **Live production site (`theme.lightn.co.nz`):** running a different (newer) build of the same component library. Confirmed by inspecting the rendered DOM of the Concertina component at `https://theme.lightn.co.nz/governance/te-tiriti/requirements`:
+  - **Chevron icon** — live site uses `ExpandCircleDownRounded` (chevron inside a circle outline). Repo source at `src/components/Concertina.tsx:3` uses `ExpandMoreRounded` (plain chevron, no circle).
+  - **`#` prefix on title** — live site renders `<span class="css-16lkf1o">#</span>` before every section title (always visible). Repo source has no `#` character anywhere; instead it shows a `LinkRounded` icon button **on hover** only.
+  - **Copy-link feature** — repo source has `copyJumpLink` (lines 159-165) and a "Link copied" tooltip (lines 188-192). Live site has neither — the `#` is purely decorative.
+- **npm publishes:** `ece-docs-components` has been published to npm **108 times** — versions `1.0.0` through `1.0.107` (latest). The author (Richard McNulty) has been publishing directly to npm **without pushing source back to GitHub**.
+
+### Implication for the audit
+
+The 5 axe violations documented in `AUDIT-FINDINGS.md` are against repo source at `1.0.1`. The live site runs a much newer version (likely `1.0.107`). Until the audit is re-run against the actual published npm package, the findings describe the **stale repo state, not production**. Some violations may already be fixed; new ones may exist that 1.0.1 didn't have.
+
+### Path forward — switch audit to the published npm package
+
+1. Replace the live-source alias with the published npm artifact:
+   - `package.json` — swap `"ece-docs-components": "file:."` (implicit self-reference via alias) for `"ece-docs-components": "^1.0.107"` installed from npm registry.
+   - `.storybook/main.ts` — remove the `viteFinal` alias `'ece-docs-components' -> join(... '..', 'src')`. Let Vite resolve `ece-docs-components` from `node_modules/` as a normal dep.
+   - `vitest.config.ts` — remove the `resolve.alias` `'ece-docs-components' -> resolve(__dirname, 'src')`. Let Vitest import from `node_modules/ece-docs-components/dist/`.
+2. Re-run `npm run test:a11y` and `npm run build-storybook`. All stories/tests now exercise the actual published artifact that `theme.lightn.co.nz` consumes.
+3. Generate a new audit diff: which of the 5 original violations persist? Which are fixed? Which new ones appear?
+4. Update `AUDIT-FINDINGS.md` to reflect the production-package audit and note the original repo-source findings as historical context.
+5. Document in this plan that `src/components/`, `.storybook/`, and `src/stories/`/`src/__tests__/` no longer have the live-source feedback loop — component edits won't reflect in Storybook until the npm package is updated. This is acceptable for an audit (we're testing, not editing).
+
+### What we cannot audit without source access
+
+- Source-level conventions (e.g., is the `#` an accessibility feature: a JS click handler that focuses the heading? Or just decorative?)
+- Internal component logic that doesn't surface in the built `dist/` (e.g., the `copyJumpLink` function being removed tells us behavior changed, but does the new version have alternative interactive patterns?)
+- **Recommendation:** request read access to the actual current source from the repo owner (Richard McNulty / RedSunMaster) before treating the npm-based audit as final. A source-based audit is more authoritative and lets us suggest precise fixes.
+
+---
+
 ## 0. Approach
 
 Storybook lives **inside `ece-docs-components/`** — the standard pattern for component library repos (MUI, Chakra, Mantine). Work happens on a throwaway branch (`storybook-setup`) off `master`. The original `master` and remote stay untouched until the client approves; we push to a personal fork instead.
