@@ -1,33 +1,35 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
-import { Button } from 'ece-docs-components';
-import { Modal, ModalProps } from 'ece-docs-components';
+import { Button, Modal } from 'ece-docs-components';
 
 const meta = {
   title: 'Components/Modal',
   component: Modal,
-  argTypes: {
-    status: {
-      control: 'select',
-      options: [
-        'mandatory',
-        'optional',
-        'accepted',
-        'action-required',
-        'action-required-note',
-        'accepted-note',
-      ],
-    },
-  },
 } satisfies Meta<typeof Modal>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const ModalWrapper: React.FC<{
-  status: ModalProps['status'];
-  note?: string;
-}> = ({ status, note }) => {
+const sampleVariable = {
+  _id: 'var-1',
+  name: 'Centre name',
+  value: 'Sample policy wording for the centre.',
+  defaultValue: 'Default suggested wording.',
+  pluralValue: 'Sample policy wordings for the centre.',
+  validFrom: new Date(),
+  customerHelpText: 'Help text for customers.',
+  writerHelpText: 'Help text for writers.',
+  state: 'Accepted',
+  hidden: false,
+  canBeBlank: false,
+  vertical: 'ECE',
+  requirementType: 'Default',
+};
+
+const ModalWrapper: React.FC<{ state?: string; isLoading?: boolean }> = ({
+  state = 'Accepted',
+  isLoading = false,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   return (
     <>
@@ -37,10 +39,6 @@ const ModalWrapper: React.FC<{
       <Modal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
-        status={status}
-        description="Please review and respond to the suggested wording for this policy section."
-        defaultText="Suggested wording goes here."
-        note={note}
         onSave={() => {}}
         onSubmit={() => {}}
         onDeclineWording={() => {}}
@@ -48,35 +46,34 @@ const ModalWrapper: React.FC<{
         onNext={() => {}}
         currentPage={1}
         totalPages={3}
+        isLoading={isLoading}
+        variable={{ ...sampleVariable, state } as any}
+        isLeafOrganisation={true}
       />
     </>
   );
 };
 
-export const Mandatory: Story = {
-  render: (args) => <ModalWrapper status="mandatory" />,
+export const Default: Story = {
+  render: () => <ModalWrapper />,
 };
 
-export const Optional: Story = {
-  render: (args) => <ModalWrapper status="optional" />,
-};
-
-export const Accepted: Story = {
-  render: (args) => <ModalWrapper status="accepted" />,
+export const Pending: Story = {
+  render: () => <ModalWrapper state="Pending" />,
 };
 
 export const ActionRequired: Story = {
-  render: (args) => <ModalWrapper status="action-required" />,
+  render: () => <ModalWrapper state="Action Required" />,
 };
 
-export const ActionRequiredNote: Story = {
-  render: (args) => (
-    <ModalWrapper status="action-required-note" note="A reviewer has requested changes to this wording." />
-  ),
+export const Declined: Story = {
+  render: () => <ModalWrapper state="Declined" />,
 };
 
-export const AcceptedNote: Story = {
-  render: (args) => (
-    <ModalWrapper status="accepted-note" note="This wording was accepted and locked for review." />
-  ),
+export const NotStarted: Story = {
+  render: () => <ModalWrapper state="Not Started" />,
+};
+
+export const Loading: Story = {
+  render: () => <ModalWrapper state="Accepted" isLoading />,
 };

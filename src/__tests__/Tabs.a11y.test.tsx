@@ -1,15 +1,8 @@
 import { render } from '@testing-library/react';
 import { axe } from 'jest-axe';
-import { useEffect } from 'react';
-import { ThemeProvider, useTheme, Tabs } from 'ece-docs-components';
+import { ThemeProvider, Tabs } from 'ece-docs-components';
 
-const brands = ['default', 'school', 'health'] as const;
-
-const ThemeSync = ({ brand }: { brand: string }) => {
-  const { setTheme } = useTheme();
-  useEffect(() => { setTheme(brand as 'default' | 'school' | 'health'); }, [brand, setTheme]);
-  return null;
-};
+const brands = ['Lightn', 'ECE', 'School', 'GP'] as const;
 
 const tabs = [
   { id: 'overview', label: 'Overview', content: 'Overview content goes here.' },
@@ -20,8 +13,7 @@ const tabs = [
 brands.forEach((brand) => {
   it(`Tabs (${brand}) has no a11y violations`, async () => {
     const { container } = render(
-      <ThemeProvider>
-        <ThemeSync brand={brand} />
+      <ThemeProvider theme={brand}>
         <Tabs tabs={tabs} defaultTab="overview" />
       </ThemeProvider>
     );

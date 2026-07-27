@@ -1,54 +1,46 @@
 import { render } from '@testing-library/react';
 import { axe } from 'jest-axe';
-import { useEffect } from 'react';
-import { ThemeProvider, useTheme, Modal } from 'ece-docs-components';
+import { ThemeProvider, Modal } from 'ece-docs-components';
 
-const brands = ['default', 'school', 'health'] as const;
+const brands = ['Lightn', 'ECE', 'School', 'GP'] as const;
 
-const ThemeSync = ({ brand }: { brand: string }) => {
-  const { setTheme } = useTheme();
-  useEffect(() => { setTheme(brand as 'default' | 'school' | 'health'); }, [brand, setTheme]);
-  return null;
+const sampleVariable = {
+  _id: 'var-1',
+  name: 'Centre name',
+  value: 'Sample policy wording for the centre.',
+  defaultValue: 'Default suggested wording.',
+  pluralValue: 'Sample policy wordings for the centre.',
+  validFrom: new Date(),
+  customerHelpText: 'Help text for customers.',
+  writerHelpText: 'Help text for writers.',
+  state: 'Accepted',
+  hidden: false,
+  canBeBlank: false,
+  vertical: 'ECE',
+  requirementType: 'Default',
 };
 
-const statuses = [
-  'mandatory',
-  'optional',
-  'accepted',
-  'action-required',
-  'action-required-note',
-  'accepted-note',
-] as const;
-
 brands.forEach((brand) => {
-  statuses.forEach((status) => {
-    it(`Modal (${brand} / ${status}) has no a11y violations`, async () => {
-      const { container } = render(
-        <ThemeProvider>
-          <ThemeSync brand={brand} />
-          <Modal
-            isOpen={true}
-            onClose={() => {}}
-            status={status}
-            description="Please review and respond to the suggested wording for this policy section."
-            defaultText="Suggested wording goes here."
-            note={
-              status === 'action-required-note' || status === 'accepted-note'
-                ? 'A reviewer has noted an issue with this wording.'
-                : undefined
-            }
-            onSave={() => {}}
-            onSubmit={() => {}}
-            onDeclineWording={() => {}}
-            onPrevious={() => {}}
-            onNext={() => {}}
-            currentPage={1}
-            totalPages={3}
-          />
-        </ThemeProvider>
-      );
-      const results = await axe(container);
-      expect(results).toHaveNoViolations();
-    });
+  it(`Modal (${brand}) has no a11y violations`, async () => {
+    const { container } = render(
+      <ThemeProvider theme={brand}>
+        <Modal
+          isOpen={true}
+          onClose={() => {}}
+          onSave={() => {}}
+          onSubmit={() => {}}
+          onDeclineWording={() => {}}
+          onPrevious={() => {}}
+          onNext={() => {}}
+          currentPage={1}
+          totalPages={3}
+          isLoading={false}
+          variable={sampleVariable as any}
+          isLeafOrganisation={true}
+        />
+      </ThemeProvider>
+    );
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

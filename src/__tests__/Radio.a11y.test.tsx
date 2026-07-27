@@ -1,26 +1,17 @@
 import { render } from '@testing-library/react';
 import { axe } from 'jest-axe';
-import { useEffect } from 'react';
 import {
   ThemeProvider,
-  useTheme,
   Radio,
   RadioGroup,
 } from 'ece-docs-components';
 
-const brands = ['default', 'school', 'health'] as const;
-
-const ThemeSync = ({ brand }: { brand: string }) => {
-  const { setTheme } = useTheme();
-  useEffect(() => { setTheme(brand as 'default' | 'school' | 'health'); }, [brand, setTheme]);
-  return null;
-};
+const brands = ['Lightn', 'ECE', 'School', 'GP'] as const;
 
 brands.forEach((brand) => {
   it(`Radio (${brand}) has no a11y violations`, async () => {
     const { container } = render(
-      <ThemeProvider>
-        <ThemeSync brand={brand} />
+      <ThemeProvider theme={brand}>
         <Radio label="Option A" name="opt" />
       </ThemeProvider>
     );
@@ -30,8 +21,7 @@ brands.forEach((brand) => {
 
   it(`RadioGroup (${brand}) has no a11y violations`, async () => {
     const { container } = render(
-      <ThemeProvider>
-        <ThemeSync brand={brand} />
+      <ThemeProvider theme={brand}>
         <RadioGroup label="Choose a plan">
           <Radio label="Free" name="plan" />
           <Radio label="Pro" name="plan" />

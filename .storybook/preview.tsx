@@ -1,16 +1,8 @@
 import type { Preview } from '@storybook/react';
-import React, { useEffect } from 'react';
-import { ThemeProvider, useTheme } from 'ece-docs-components';
+import React from 'react';
+import { ThemeProvider } from 'ece-docs-components';
 
-type Brand = 'default' | 'school' | 'health';
-
-const ThemeSync: React.FC<{ brand: Brand }> = ({ brand }) => {
-  const { setTheme } = useTheme();
-  useEffect(() => {
-    setTheme(brand);
-  }, [brand, setTheme]);
-  return null;
-};
+type Brand = 'ECE' | 'School' | 'GP' | 'Lightn';
 
 const preview: Preview = {
   globalTypes: {
@@ -20,9 +12,10 @@ const preview: Preview = {
         title: 'Brand',
         icon: 'circlehollow',
         items: [
-          { value: 'default', title: 'ECE Docs' },
-          { value: 'school', title: 'School Docs' },
-          { value: 'health', title: 'GP Docs' },
+          { value: 'Lightn', title: 'Lightn (default)' },
+          { value: 'ECE', title: 'ECE Docs' },
+          { value: 'School', title: 'School Docs' },
+          { value: 'GP', title: 'GP Docs' },
         ],
         dynamicTitle: true,
       },
@@ -30,10 +23,9 @@ const preview: Preview = {
   },
   decorators: [
     (Story, context) => {
-      const brand: Brand = (context.globals.brand as Brand) || 'default';
+      const brand = (context.globals.brand as Brand) || 'Lightn';
       return (
-        <ThemeProvider>
-          <ThemeSync brand={brand} />
+        <ThemeProvider theme={brand}>
           <Story />
         </ThemeProvider>
       );

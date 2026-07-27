@@ -6,7 +6,9 @@ const meta = {
   component: Breadcrumb,
   argTypes: {
     currentItem: { control: 'text' },
+    pathname: { control: 'text' },
     onItemSelect: { action: 'selected' },
+    onNavigate: { action: 'navigated' },
   },
 } satisfies Meta<typeof Breadcrumb>;
 
@@ -19,15 +21,16 @@ const sampleItems = [
 ];
 
 const sampleDropdownItems = [
-  'Philosophy and Values',
-  'Te Tiriti o Waitangi',
-  'Self-Review and Internal Evaluation',
+  { label: 'Philosophy and Values', href: '/policies/governance/philosophy-and-values' },
+  { label: 'Te Tiriti o Waitangi', href: '/policies/governance/te-tiriti-o-waitangi' },
+  { label: 'Self-Review and Internal Evaluation', href: '/policies/governance/self-review' },
 ];
 
 export const Default: Story = {
   args: {
     items: sampleItems,
     currentItem: 'Philosophy and Values',
+    pathname: '/policies/governance/philosophy-and-values',
     dropdownItems: sampleDropdownItems,
     onItemSelect: () => {},
   },
@@ -37,6 +40,7 @@ export const NoDropdown: Story = {
   args: {
     items: sampleItems,
     currentItem: 'Governance',
+    pathname: '/policies/governance',
   },
 };
 
@@ -44,7 +48,11 @@ export const SingleItem: Story = {
   args: {
     items: [{ label: 'Home', href: '/' }],
     currentItem: 'Dashboard',
-    dropdownItems: ['Dashboard', 'Reports'],
+    pathname: '/dashboard',
+    dropdownItems: [
+      { label: 'Dashboard', href: '/dashboard' },
+      { label: 'Reports', href: '/reports' },
+    ],
     onItemSelect: () => {},
   },
 };

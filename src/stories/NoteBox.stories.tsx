@@ -5,19 +5,17 @@ const meta = {
   title: 'Components/NoteBox',
   component: NoteBox,
   argTypes: {
-    variant: {
+    status: {
       control: 'select',
-      options: [
-        'default',
-        'mandatory',
-        'optional',
-        'pending',
-        'accepted',
-        'action-required',
-        'custom',
-      ],
+      options: ['Accepted', 'Pending', 'Action Required', 'Declined', 'Not Started', 'Rejected'],
+    },
+    requirementType: {
+      control: 'select',
+      options: ['Default', 'Optional'],
     },
     label: { control: 'text' },
+    note: { control: 'text' },
+    onEditClick: { action: 'editClicked' },
   },
 } satisfies Meta<typeof NoteBox>;
 
@@ -25,36 +23,40 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  args: { variant: 'default', children: 'Highlighted text within a policy.' },
+  args: { status: 'Pending', label: 'Note', children: 'Highlighted text within a policy.' },
 };
 
 export const Mandatory: Story = {
-  args: { variant: 'mandatory', children: 'This question has not been answered.' },
+  args: {
+    status: 'Not Started',
+    requirementType: 'Default',
+    children: 'This question has not been answered.',
+  },
 };
 
 export const Optional: Story = {
-  args: { variant: 'optional', children: 'Optional highlighted wording.' },
-};
-
-export const Pending: Story = {
-  args: { variant: 'pending', children: 'Awaiting reviewer feedback.' },
+  args: {
+    status: 'Pending',
+    requirementType: 'Optional',
+    children: 'Optional highlighted wording.',
+  },
 };
 
 export const Accepted: Story = {
-  args: { variant: 'accepted', children: 'This wording has been accepted.' },
+  args: { status: 'Accepted', children: 'This wording has been accepted.' },
 };
 
 export const ActionRequired: Story = {
-  args: { variant: 'action-required', children: 'Changes required before approval.' },
-};
-
-export const Custom: Story = {
-  args: { variant: 'custom', label: 'Custom Label', children: 'A custom-styled highlight.' },
+  args: {
+    status: 'Action Required',
+    note: 'A reviewer has requested changes to this wording.',
+    children: 'Changes required before approval.',
+  },
 };
 
 export const WithEditClick: Story = {
   args: {
-    variant: 'default',
+    status: 'Pending',
     children: 'Click the edit button to change this highlight.',
     onEditClick: () => {},
   },

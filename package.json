@@ -54,5 +54,9 @@
     "typescript"
   ],
   "author": "Richard McNulty",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "ece-docs-components": "^1.0.107",
+    "react-toastify": "^11.1.0"
+  }
 }

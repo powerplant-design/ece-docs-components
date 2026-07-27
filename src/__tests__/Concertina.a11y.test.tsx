@@ -1,15 +1,8 @@
 import { render } from '@testing-library/react';
 import { axe } from 'jest-axe';
-import { useEffect } from 'react';
-import { ThemeProvider, useTheme, Concertina } from 'ece-docs-components';
+import { ThemeProvider, Concertina } from 'ece-docs-components';
 
-const brands = ['default', 'school', 'health'] as const;
-
-const ThemeSync = ({ brand }: { brand: string }) => {
-  const { setTheme } = useTheme();
-  useEffect(() => { setTheme(brand as 'default' | 'school' | 'health'); }, [brand, setTheme]);
-  return null;
-};
+const brands = ['Lightn', 'ECE', 'School', 'GP'] as const;
 
 const sections = [
   {
@@ -27,8 +20,7 @@ const sections = [
 brands.forEach((brand) => {
   it(`Concertina (${brand}) has no a11y violations`, async () => {
     const { container } = render(
-      <ThemeProvider>
-        <ThemeSync brand={brand} />
+      <ThemeProvider theme={brand}>
         <Concertina sections={sections} />
       </ThemeProvider>
     );

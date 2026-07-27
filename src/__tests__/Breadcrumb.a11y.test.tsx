@@ -1,15 +1,8 @@
 import { render } from '@testing-library/react';
 import { axe } from 'jest-axe';
-import { useEffect } from 'react';
-import { ThemeProvider, useTheme, Breadcrumb } from 'ece-docs-components';
+import { ThemeProvider, Breadcrumb } from 'ece-docs-components';
 
-const brands = ['default', 'school', 'health'] as const;
-
-const ThemeSync = ({ brand }: { brand: string }) => {
-  const { setTheme } = useTheme();
-  useEffect(() => { setTheme(brand as 'default' | 'school' | 'health'); }, [brand, setTheme]);
-  return null;
-};
+const brands = ['Lightn', 'ECE', 'School', 'GP'] as const;
 
 const items = [
   { label: 'Policies', href: '/policies' },
@@ -17,19 +10,19 @@ const items = [
 ];
 
 const dropdownItems = [
-  'Philosophy and Values',
-  'Te Tiriti o Waitangi',
-  'Self-Review and Internal Evaluation',
+  { label: 'Philosophy and Values', href: '/policies/governance/philosophy-and-values' },
+  { label: 'Te Tiriti o Waitangi', href: '/policies/governance/te-tiriti-o-waitangi' },
+  { label: 'Self-Review and Internal Evaluation', href: '/policies/governance/self-review' },
 ];
 
 brands.forEach((brand) => {
   it(`Breadcrumb (${brand}) has no a11y violations`, async () => {
     const { container } = render(
-      <ThemeProvider>
-        <ThemeSync brand={brand} />
+      <ThemeProvider theme={brand}>
         <Breadcrumb
           items={items}
           currentItem="Philosophy and Values"
+          pathname="/policies/governance/philosophy-and-values"
           dropdownItems={dropdownItems}
           onItemSelect={() => {}}
         />

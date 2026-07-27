@@ -1,27 +1,25 @@
 import { render } from '@testing-library/react';
 import { axe } from 'jest-axe';
-import { useEffect } from 'react';
-import { ThemeProvider, useTheme, Sidebar } from 'ece-docs-components';
+import { ThemeProvider, Sidebar } from 'ece-docs-components';
 
-const brands = ['default', 'school', 'health'] as const;
+const brands = ['Lightn', 'ECE', 'School', 'GP'] as const;
 
-const ThemeSync = ({ brand }: { brand: string }) => {
-  const { setTheme } = useTheme();
-  useEffect(() => { setTheme(brand as 'default' | 'school' | 'health'); }, [brand, setTheme]);
-  return null;
-};
+const policies = [
+  { id: 1, title: 'Philosophy and Values', url: '/policies/philosophy' },
+  { id: 2, title: 'Te Tiriti o Waitangi', url: '/policies/te-tiriti' },
+];
 
 brands.forEach((brand) => {
   it(`Sidebar (${brand}) has no a11y violations`, async () => {
     const { container } = render(
-      <ThemeProvider>
-        <ThemeSync brand={brand} />
+      <ThemeProvider theme={brand}>
         <Sidebar
           isOpen={true}
           onToggle={() => {}}
           centreName="Happy Kids Early Learning Centre"
-          activePage="policies"
-          onPageChange={() => {}}
+          policies={policies}
+          onNavigate={() => {}}
+          isAdmin
         />
       </ThemeProvider>
     );

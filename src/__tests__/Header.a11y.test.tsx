@@ -1,22 +1,26 @@
 import { render } from '@testing-library/react';
 import { axe } from 'jest-axe';
-import { useEffect } from 'react';
-import { ThemeProvider, useTheme, Header } from 'ece-docs-components';
+import { ThemeProvider, Header, HeaderSearchResult } from 'ece-docs-components';
 
-const brands = ['default', 'school', 'health'] as const;
+const brands = ['Lightn', 'ECE', 'School', 'GP'] as const;
 
-const ThemeSync = ({ brand }: { brand: string }) => {
-  const { setTheme } = useTheme();
-  useEffect(() => { setTheme(brand as 'default' | 'school' | 'health'); }, [brand, setTheme]);
-  return null;
-};
+const sampleSearch = (query: string): HeaderSearchResult[] => [
+  { label: `${query} result`, value: 'sample', description: 'A sample search result' },
+];
 
 brands.forEach((brand) => {
   it(`Header (${brand}) has no a11y violations`, async () => {
     const { container } = render(
-      <ThemeProvider>
-        <ThemeSync brand={brand} />
-        <Header userName="John Doe" userInitials="JD" />
+      <ThemeProvider theme={brand}>
+        <Header
+          userName="John Doe"
+          userInitials="JD"
+          toggleMenu={() => {}}
+          signOut={() => {}}
+          signUpStatus="Active"
+          search={sampleSearch}
+          onResultClick={() => {}}
+        />
       </ThemeProvider>
     );
     const results = await axe(container);
