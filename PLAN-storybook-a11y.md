@@ -1,5 +1,76 @@
 # Plan: Storybook Design System with A11y Testing (Inside-Repo)
 
+## ✅ Status — v2 retarget complete (28 Jul 2026, commit `a3a1caf`)
+
+The audit harness has been **retargeted from stale repo source (v1.0.1) to the published npm package `ece-docs-components@1.0.107`** — the actual artifact consumed by `theme.lightn.co.nz` in production. The "Source vs Production Drift" concern below has been resolved by switching the audit target. The drift section is retained below for context.
+
+### What changed from v1 (repo-source audit at 1.0.1) to v2 (npm-package audit at 1.0.107)
+
+| Aspect | v1 (commit `b0a49b6`) | v2 (commit `a3a1caf`) |
+|---|---|---|
+| Audit target | `src/components/*` (local source, live alias) | `node_modules/ece-docs-components/dist/*` (npm published) |
+| Library version | 1.0.1 (git commit `4f997c4` only) | 1.0.107 (npm latest at audit time) |
+| Components covered | 22 | 29 (8 new + DefinitionBox removed) |
+| Brands | 3 (default / school / health) | 4 (Lightn / ECE / School / GP) |
+| ThemeProvider API | `<ThemeProvider><ThemeSync brand={...} /></ThemeProvider>` | `<ThemeProvider theme={brand}>` |
+| Total axe assertions | 87 | 124 |
+| Tests passing | 72 | 96 |
+| Tests failing (a11y violations) | 15 | 28 |
+| Distinct violation types | 5 | 7 |
+| Live-source feedback loop | Yes (Vite alias to `src/`) | **No** (alias removed; ops on `dist/`) |
+
+### Infra changes applied in v2
+
+- `package.json` — added `ece-docs-components@^1.0.107` (runtime dep) + `react-toastify@^11.0.5` (new required peer dep, used by 1.0.107's ThemeProvider which now also renders `<CssBaseline/>` and `<ToastContainer/>`)
+- `.storybook/main.ts` — removed the `viteFinal` `ece-docs-components -> src` alias; imports now resolve from `node_modules/`
+- `vitest.config.ts` — removed the `resolve.alias` `ece-docs-components -> src`; same behaviour
+- `.storybook/preview.tsx` — replaced 3-brand `ThemeSync` decorator with 4-brand direct `<ThemeProvider theme={brand}>` (1.0.107 dropped `setTheme` context; `useTheme()` returns just the MUI `Theme`)
+
+### New components added in 1.0.107 (8 stories + 8 tests created)
+
+AcknowledgementBox, AutocompleteSelect, ExpandingBox, ExpandingBoxToggle, FileUploadButton, Footer, RichTextArea, SidebarV2
+
+(`HeaderSearchResult` is an exported **type**, not a JSX component — exercised via `Header`'s `search` prop returning `HeaderSearchResult[]`.)
+
+### Component removed in 1.0.107
+
+`DefinitionBox` — story + test files deleted in v2.
+
+### Existing components with prop changes between 1.0.1 and 1.0.107
+
+| Component | Change |
+|---|---|
+| Header | new required props: `toggleMenu`, `signOut`, `signUpStatus` (`'Withdrawn' \| 'Onboarding' \| 'Active' \| 'In Review'`); new optional `search` (function returning `Promise<HeaderSearchResult[]> \| HeaderSearchResult[]`), `onResultClick`, `resetKey`, `onSearchSubmit` |
+| Modal | full API rewrite — removed `status`/`description`/`defaultText`/`note`; added `isLoading`, `variable` (object with `state`, `value`, `defaultValue`, `_id`, `canBeBlank`, `requirementType`, etc.), `isLeafOrganisation` |
+| NoteBox | `variant` prop replaced with `status` (VariableState string) + `label` |
+| Sidebar | removed `activePage` and `onPageChange`; added `policies`, `onNavigate`, `isAdmin` |
+| Breadcrumb | `dropdownItems` changed from `string[]` to `BreadcrumbItem[]` (`{label, href?}[]`); added required `pathname` |
+| Concertina | `content` prop widened from `string` to `React.ReactNode` (now allows `<p>` etc.) |
+
+### v2 audit findings (against published npm 1.0.107) — 7 distinct violations × 4 brands = 28 failures
+
+| # | Component | axe rule | Status vs v1 |
+|---|---|---|---|
+| 1 | Breadcrumb | `landmark-unique` | **Persisted** from v1 — `<Box component="nav">` and inner MUI `<Breadcrumbs>` both render `<nav>` with no disambiguating `aria-label` |
+| 2 | Header | `button-name` | **Persisted + worsened** — v1 had 1 unlabelled search button; v2 has 3 unlabelled `IconButton`s (menu toggle, desktop search, mobile search) at `Header.js:462` |
+| 3 | NoteBox | `button-name` | **New regression** — new `EditButton` (`NoteBox.js:82`, `edit-button` className) is an icon-only `IconButton` with no `aria-label`; not present in v1 |
+| 4 | Progress | `aria-progressbar-name` | **Persisted** — `LinearProgress` at `Progress.js:19` still has no `aria-label` |
+| 5 | Select | `aria-input-field-name` | **Persisted** — `StyledSelect` at `Select.js:57` still uses same `id` for `htmlFor` (label) and Select's own `id`, causing `aria-labelledby` self-reference |
+| 6 | Sidebar (v1) | `list` | **Persisted** — `<ul>` wraps `<Box>` (rendered as `<div>`) before `<li>` items |
+| 7 | SidebarV2 (new) | `nested-interactive` | **New component, new violation** — `ListItemButton` (interactive) contains focusable descendants; nested interactive elements |
+
+**Full v1 → v2 comparison:** all 5 original v1 violations persisted through 106 intervening npm publishes. NoteBox regressed (gained a new violation). SidebarV2 shipped with a new violation out of the gate. **The npm package has not received a11y improvements between 1.0.1 and 1.0.107.**
+
+See `AUDIT-FINDINGS.md` for the full write-up with suggested fixes.
+
+### What v2 cannot tell us (audit gaps)
+
+- **Source-level conventions** — we're testing compiled `dist/`, not source. Code-level patterns (e.g., is the `#` a click-to-focus anchor handler?) aren't visible.
+- **Diffs between intermediate versions** — we know 1.0.1 vs 1.0.107; we don't know when each violation was introduced or whether any were briefly fixed and reverted.
+- **Source access recommended** — request read access to actual current source from Richard McNulty / RedSunMaster for a definitive source-level audit with editor feedback and precise fix suggestions.
+
+---
+
 ## ⚠ Critical Context: Source vs Production Drift (added 28 Jul 2026)
 
 **The git repo does NOT match what's running in production.** This affects the validity of any audit run against the repo source.
