@@ -1,110 +1,141 @@
 # Accessibility Audit Findings — ece-docs-components
 
-**Current audit:** v2 — published npm package `ece-docs-components@1.0.107` (28 Jul 2026, commit `a3a1caf`)
-**Previous audit:** v1 — git `master` at `4f997c4` (npm `1.0.1`) — retained below under "v1 findings (repo source)" for historical context
-**Method:** Storybook 10 + `@storybook/addon-a11y` (axe-core 4.x) — automated checks against the rendered DOM of each component across brand themes.
+**Current audit:** v3 — published npm package `ece-docs-components@1.0.107` (28 Jul 2026)
+**Previous audit:** v2 — same npm package, jest-axe-based (no color-contrast detection)
+**Previous audit:** v1 — git `master` at `4f997c4` (npm `1.0.1`)
+**Method:** Storybook 10 + `@storybook/test-runner` (Playwright Chromium) + `@storybook/addon-a11y` (axe-core 4.12) — automated checks in a **real browser** against the rendered DOM of each component across brand themes. Includes `color-contrast` (unlike v2's jest-axe/jsdom environment).
 
 | Audit | Target | Brands | Components | Tests | Pass | Fail |
 |---|---|---|---|---|---|---|
-| **v2 (current)** | npm `1.0.107` (production artifact) | 4 (Lightn/ECE/School/GP) | 29 | 124 | 96 | 28 |
+| **v3 (current)** | npm `1.0.107` (production artifact) | 4 (Lightn/ECE/School/GP) | 29 | 114 | 78 | 36 |
+| v2 (historical) | npm `1.0.107` (jest-axe, no colour-contrast) | 4 (Lightn/ECE/School/GP) | 29 | 124 | 96 | 28 |
 | v1 (historical) | git source at `4f997c4` (npm `1.0.1`) | 3 (default/school/health) | 22 | 87 | 72 | 15 |
 
-Jump to: [v2 findings (production package)](#v2-findings-against-published-npm-1107) · [v1 findings (historical repo source)](#v1-findings-repo-source-historical)
+Jump to: [v3 findings (production package)](#v3-findings-against-published-npm-1107) · [v2 findings (jest-axe, historical)](#v2-findings-against-published-npm-1107) · [v1 findings (historical repo source)](#v1-findings-repo-source-historical)
 
 ---
 
-# v2 findings (against published npm 1.0.107)
+# v3 findings (against published npm 1.0.107)
 
-This is the **authoritative audit** — it tests the actual artifact consumed by `theme.lightn.co.nz` in production.
+This is the **authoritative audit** — it tests the actual artifact consumed by `theme.lightn.co.nz` in production, using a **real browser** (Playwright Chromium) so that `color-contrast` checks are active.
 
 ## Summary
 
 | Metric | Count |
 |---|---|
 | Components audited | 29 |
-| Total assertions | 124 |
-| Pass | 96 |
-| Fail (axe violations) | 28 |
-| Distinct violation types | 7 |
-| Components with violations | 7 |
-| Components clean | 22 |
+| Total assertions | 114 |
+| Pass | 78 |
+| Fail (axe violations) | 36 |
+| Distinct violation types | 9 (7 structural + 2 colour-contrast) |
+| Components with violations | 11 (7 structural + 4 colour-contrast) |
+| Components clean | 18 |
 
-All 28 failures are **source-side** in the published npm package (`node_modules/ece-docs-components/dist/esm/components/*.js`). All are **brand-agnostic** — the same violation fires on all 4 brands (Lightn, ECE, School, GP). No brand-specific contrast or colour issues were detected (note: `color-contrast` is excluded by jest-axe default).
+### New in v3: colour-contrast violations detected
 
-## v1 → v2 comparison: every original violation persisted
+The real-browser test-runner catches `color-contrast` violations that jest-axe silently skipped. **4 components fail colour-contrast on the Lightn brand** (background `#fdfcee`):
 
-| # | Component | axe rule | v1 (1.0.1) | v2 (1.0.107) | Notes |
-|---|---|---|---|---|---|
-| 1 | Breadcrumb | `landmark-unique` | ❌ | ❌ | **Persisted** — same root cause |
-| 2 | Header | `button-name` | ❌ | ❌ | **Worsened** — v1 had 1 unlabelled search button; v2 has 3 (menu toggle, desktop search, mobile search) |
-| 3 | NoteBox | `button-name` | ✓ | ❌ | **New regression** — new `EditButton` (icon-only) added without `aria-label` |
-| 4 | Progress | `aria-progressbar-name` | ❌ | ❌ | **Persisted** |
-| 5 | Select | `aria-input-field-name` | ❌ | ❌ | **Persisted** — same `aria-labelledby` self-reference issue |
-| 6 | Sidebar | `list` | ❌ | ❌ | **Persisted** — `<ul>` still wraps `<div>` before `<li>` |
-| 7 | SidebarV2 (new) | `nested-interactive` | n/a | ❌ | **New component, new violation** — `ListItemButton` (interactive) contains focusable descendants |
+| Component | Element | Foreground | Background | Ratio | Required | Passes other brands? |
+|---|---|---|---|---|---|---|
+| Input (`WithError`) | Helper text | `#f56b6b` | `#fdfcee` | 2.82 | 4.5:1 | ✓ (white bg) |
+| Select (`WithError`) | Helper/error text | `#f56b6b` | `#fdfcee` | 2.82 | 4.5:1 | ✓ (white bg) |
+| Select (`WithHelperText`) | Helper text | `#93826e` | `#fdfcee` | 3.59 | 4.5:1 | ✓ (white bg) |
+| Checkbox (`WithDescription`) | Description text | `#93826e` | `#fdfcee` | 3.59 | 4.5:1 | ✓ (white bg) |
+| Progress (`StepIndicator*`) | Step labels | `#93826e` | `#fdfcee` | 3.59 | 4.5:1 | ✓ (white bg) |
 
-**The npm package received no a11y improvements between versions 1.0.1 (Oct 2025) and 1.0.107 (Jul 2026).** All 5 original violations persisted through 106 intervening publishes; NoteBox regressed (gained a violation); SidebarV2 shipped new with a violation.
+All colour-contrast violations are **Lightn-brand-specific** — they pass on ECE, School, and GP because those brands use a pure-white (`#ffffff`) background. The Lightn brand's `#fdfcee` (warm off-white) is too close to the muted text colours.
 
-## Violations — v2 detail
+### Structural violations (brand-agnostic — unchanged from v2)
 
-### 1. `Breadcrumb` — `landmark-unique` (all 4 brands)
+| # | Component | axe rule | Status vs v2 |
+|---|---|---|---|
+| 1 | Breadcrumb | `landmark-unique` | ❌ Persisted |
+| 2 | Header | `button-name` (3 instances) | ❌ Persisted, worsened |
+| 3 | NoteBox | `button-name` (edit icon) | ❌ Persisted regression |
+| 4 | Progress | `aria-progressbar-name` | ❌ Persisted |
+| 5 | Select | `aria-input-field-name` (6 instances) | ❌ Persisted |
+| 6 | Sidebar | `list` (3 instances) | ❌ Persisted |
+| 7 | SidebarV2 | `button-name` (collapse buttons) | ❌ New — replaced `nested-interactive` from v2 |
 
-**Where:** `node_modules/ece-docs-components/dist/esm/components/Breadcrumb.js:174` — outer `<Box component="nav">`, and `Breadcrumb.js:182` — inner `<Breadcrumbs>` (defaults to `<nav>`).
+Total: **28 structural violations** (brand-agnostic, same count as v2) + **8 colour-contrast violations** (Lightn only) = **36 failures**. The v2 listing of 28 structural failures remains valid; v3 adds 8 colour-contrast failures.
 
-The component renders two `<nav>` landmarks, neither with an `aria-label`/`aria-labelledby`/`title`. Confirmed the inner `Breadcrumbs` has the same default in 1.0.107 as in 1.0.1.
+## v2 → v3 comparison
 
-**Suggested fix:** add `aria-label="Breadcrumb"` to one of them (recommended: the inner `Breadcrumbs`), or drop `component="nav"` from the outer `Box`.
+| Aspect | v2 (jest-axe) | v3 (test-runner) |
+|---|---|---|
+| Test environment | jsdom (mock DOM) | Playwright Chromium (real browser) |
+| `color-contrast` | ❌ Excluded by default | ✅ Active |
+| Total tests | 124 | 114 |
+| Tests pass | 96 | 78 |
+| Tests fail | 28 | 36 |
+| Brand-specific findings | ❌ None detected | ✅ 4 Lightn-specific contrast issues |
+| Execution | `vitest` (in-process) | `test-storybook` (CLI, per-brand) |
 
-### 2. `Header` — `button-name` (all 4 brands) — **worsened vs v1**
+## Violations — v3 detail
 
-**Where:** `Header.js:462` — three icon-only `IconButton`s without `aria-label`:
-1. **Menu toggle** (line 462 onwards) — `<IconButton disableRipple={true} onClick={toggleMenu} ...><MenuRounded/></IconButton>` — no `aria-label`
-2. **Desktop search button** — `<StyledSearchButton onClick={handleSearchClick}><StyledSearchIcon><SearchRounded/></StyledSearchIcon></StyledSearchButton>` — no `aria-label`. `StyledSearchButton` is `styled(IconButton)` at `Header.js:141`.
-3. **Mobile search button** — `<StyledSearchButton disableRipple={true} onClick={toggleMobileSearch}>...` — no `aria-label`
+### Violations 1-7 (structural): unchanged from v2
 
-v1 only flagged the desktop search button. The menu toggle and mobile search buttons were added between 1.0.1 and 1.0.107 without `aria-label`s.
+All 7 structural-violation types from v2 **persist** in v3. One change: `SidebarV2` now fails `button-name` instead of `nested-interactive` (the test-runner evaluates the DOM differently than jest-axe/Storybook a11y panel, but the root cause is the same — the collapse toggle `<IconButton>` has no `aria-label`).
 
-**Suggested fix:** add `aria-label="Open menu"`, `aria-label="Search"`, and `aria-label="Search"` to each respectively. i18n: extract strings if the consumer app supports multiple languages.
+#### 1. `Breadcrumb` — `landmark-unique`
 
-### 3. `NoteBox` — `button-name` (all 4 brands) — **new regression**
+Two `<nav>` landmarks without distinguishing labels. (See v2 detail below for line references.)
 
-**Where:** `NoteBox.js:82` — `const EditButton = styled(IconButton)(...)` and `NoteBox.js:140` — `<EditButton className="edit-button" onClick=...>` — the `EditButton` is rendered inside a `<span class="highlight-span">` next to the highlighted children text. It's an icon-only `IconButton` (no text content visible) but has **no `aria-label`**.
+#### 2. `Header` — `button-name`
 
-The `EditButton` was added between 1.0.1 (which had no edit affordance on highlighted text) and 1.0.107.
+Three icon-only `<IconButton>`s without `aria-label`: menu toggle, desktop search, mobile search. (Worsened from v1's 1 instance.)
 
-**Suggested fix:** add `aria-label="Edit"` (or `aria-label={`Edit ${label}`}` if `label` prop is provided) to the `EditButton` usage at line 140.
+#### 3. `NoteBox` — `button-name`
 
-### 4. `Progress` — `aria-progressbar-name` (all 4 brands)
+Edit icon-only `<IconButton>` without `aria-label`. (New regression in 1.0.107.)
 
-**Where:** `Progress.js:19` — `<StyledLinearProgress variant="determinate" value={percentage} />` — no `aria-label` or `aria-labelledby` connecting it to the visible "Step {current} of {total}" label above it.
+#### 4. `Progress` — `aria-progressbar-name`
 
-Identical to v1 — the violation persisted across all 106 publishes.
+`<LinearProgress>` has no accessible name linking it to the visible "Step X of Y" label.
 
-**Suggested fix:** add `aria-label={`Progress: step ${current} of ${total}`}` to the `StyledLinearProgress` element, OR add an `id` to the "Step X of Y" `<Typography>` and reference it via `aria-labelledby`.
+#### 5. `Select` — `aria-input-field-name`
 
-### 5. `Select` — `aria-input-field-name` (all 4 brands)
+`<Select>` combobox has self-referencing `aria-labelledby` — `htmlFor` / `id` collision.
 
-**Where:** `Select.js:57` — `StyledLabel htmlFor={selectId}` (the label) AND `StyledSelect id={selectId}` (the select itself) — same `selectId` for both. MUI's rendered `div[role="combobox"]` therefore ends up with `aria-labelledby` pointing back at its own `id` (self-reference). The visible `<InputLabel htmlFor>` association isn't exposed to assistive tech.
+#### 6. `Sidebar` — `list`
 
-Persisted from v1 — same root cause.
+`<ul>` wraps `<div>` instead of `<li>` directly.
 
-**Suggested fix:** give the label its own `id` (e.g. `${selectId}-label`) and pass `labelId={labelId}` to `MuiSelect`. MUI forwards this to `aria-labelledby` on the combobox, resolving the self-reference.
+#### 7. `SidebarV2` — `button-name`
 
-### 6. `Sidebar` (original) — `list` (all 4 brands)
+Collapse toggle `<IconButton>` inside menu items lacks `aria-label`.
 
-**Where:** The original `Sidebar` — still shipped in 1.0.107 alongside `SidebarV2`. `<List>` (renders `<ul>`) wraps a `<Box>` (renders `<div>`) which wraps `<MenuItemButton>` (renders `<li>`).
+### Violation 8 (new in v3): colour-contrast — error text on Lightn
 
-Confirmed the structure continues from `Sidebar.js:197` — `<List sx={{p:0}}>` containing `<Box sx={{mb:1}}>` containing `<MenuItemButton>`.
+**Components:** `Input` (WithError), `Select` (WithError)
 
-Persisted from v1.
+**Rule:** `color-contrast` — text must have contrast ≥ 4.5:1 against its background.
 
-**Suggested fix:** move the `mb: 1` margin onto the `<MenuItemButton>` directly and drop the wrapping `<Box>`, OR replace the wrapping `<Box>` with a `<>` fragment, so `<ul>` contains `<li>` directly.
+**Details:**
+- Foreground: `#f56b6b` (coral red error text)
+- Background: `#fdfcee` (Lightn warm off-white)
+- Measured ratio: **2.82:1** (needs 4.5:1)
+- Font: 10.5pt (14px), normal weight
 
-### 7. `SidebarV2` — `nested-interactive` (all 4 brands) — **new component, new violation**
+**Affects:** Lightn brand only. Passes on ECE/School/GP (pure white `#ffffff` background).
 
-**Where:** `SidebarV2.js:115` — `<MenuItemButton>` (interactive element, renders `<li role="button">` or similar) contains nested focusable descendants. Specifically, when an item has `item.items` (sub-items), an `<IconButton>` for the collapse toggle (`SidebarV2.js:148`) is rendered **inside** the `<MenuItemButton>`. Both are independently focusable/clickable, creating nested interactive semantics.
+**Suggested fix:** Darken the error colour for Lightn theme (e.g. `#d32f2f`, `#c62828`), or change the Lightn page background to `#ffffff`.
 
-**Suggested fix:** restructure so the collapse `<IconButton>` is a **sibling** of `<MenuItemButton>`, not a descendant. Or move navigation behaviour to the inner `<ListItemText>` and drop `ListItemButton`'s interactive semantics in favour of a plain `<li>` wrapper. Or split the row into two separate controls (navigate vs expand) using a grid layout.
+### Violation 9 (new in v3): colour-contrast — muted text on Lightn
+
+**Components:** `Checkbox` (WithDescription), `Select` (WithHelperText), `Progress` (StepIndicatorDefault, StepIndicatorLast)
+
+**Rule:** `color-contrast` — text must have contrast ≥ 4.5:1 against its background.
+
+**Details:**
+- Foreground: `#93826e` (warm grey-brown, muted/helper text)
+- Background: `#fdfcee` (Lightn warm off-white)
+- Measured ratio: **3.59:1** (needs 4.5:1)
+- Font sizes: 10.5pt (14px) for Checkbox/Select, 9pt (12px) for Progress steps
+
+**Affects:** Lightn brand only. Passes on ECE/School/GP.
+
+**Suggested fix:** Darken the muted-text colour for Lightn theme (e.g. `#7a6b5a`), or change the Lightn page background to `#ffffff`.
 
 ## Components that passed cleanly (v2)
 
@@ -114,32 +145,40 @@ ActionButton, Alert, AutocompleteSelect, Button, Card, Checkbox, Concertina, Exp
 
 > Note: `Progress` (the wrapper with the `LinearProgress`) fails `aria-progressbar-name` (see #4). Its sibling `StepIndicator` (also exported from `Progress.js`) passes cleanly. Similarly, `Radio` and `RadioGroup` are separate exports from `Radio.js`, both passing. `Modal` covers all `VariableState` status values the component accepts (`Pending`, `ActionRequired`, `Declined`, `NotStarted`, `Loading`).
 
-## What was NOT tested by this audit (v2 caveats)
+## What was NOT tested by this audit (v3 caveats)
 
-- **Color contrast (WCAG AA/AAA)** — jest-axe excludes `color-contrast` by default; requires a rendered layout engine. Visual review in Storybook is needed. The 4 brand palettes (especially Lightn, the new default) should be manually checked for contrast ratio on text/background combinations.
 - **Keyboard navigation** — not automated. Required manual review in Storybook for: tab order, `:focus-visible` styling, focus trap inside `Modal`/`SimpleModal`/`Sidebar` mobile drawer, roving `tabindex` in `Radio`/`Tabs`.
 - **Screen reader behaviour** — axe checks DOM semantics, not AT output. NVDA/VoiceOver smoke test recommended for: `Modal`, `SimpleModal`, `Breadcrumb` (especially given `landmark-unique` violation), `Select` (given `aria-input-field-name` violation), `Sidebar`/`SidebarV2`.
 - **Reduced-motion / high-contrast-mode** — out of scope.
-- **`SidebarV2` `matchMedia`** — jsdom mock environment lacks `window.matchMedia`; test environment polyfilled `window.matchMedia` inline to let `SidebarV2` render. Production browsers have `matchMedia` natively.
+- **ECE, School, GP brand colour-contrast for non-`#ffffff` backgrounds** — the current ECE/School/GP themes use pure-white page backgrounds, so the Lightn-specific contrast issues don't apply. However, if any brand theme uses a non-white background colour for page-level containers, spot-checking is recommended.
 
-## How to reproduce (v2)
+## How to reproduce (v3)
 
 ```bash
 git checkout storybook-setup
 git pull myfork storybook-setup
-npm install                                     # installs ece-docs-components@^1.0.107 + react-toastify@^11.0.5
-npm run test:a11y                               # 124 tests, 28 fail (the 7 violations × 4 brands)
-npm run storybook                               # dev server on http://localhost:6006/ — brand dropdown has 4 options
-npm run build-storybook                         # static build -> storybook-static/
+npm install
+# Start Storybook dev server
+npm run storybook                               # http://localhost:6006/
+# Run all 4 brands sequentially
+npm run test-a11y:all                           # or individual: npm run test-a11y:lightn
+# Run Vitest addon smoke tests (UI widget, not a11y)
+npm run test-storybook                          # vitest, in-process
 ```
 
-Open Storybook, select each of Breadcrumb / Header / NoteBox / Progress / Select / Sidebar / SidebarV2 in the sidebar, switch brand via the toolbar dropdown, inspect the "Accessibility" panel to see the violations live.
+**Per-brand CLI:**
+- `npm run test-a11y:lightn` → 36 fail (28 structural + 8 colour-contrast)
+- `npm run test-a11y:ece` → 28 fail (structural only)
+- `npm run test-a11y:school` → 28 fail (structural only)
+- `npm run test-a11y:gp` → 28 fail (structural only)
+
+Open Storybook, select each of Breadcrumb / Header / NoteBox / Progress / Select / Sidebar / SidebarV2 / Input(WithError) / Checkbox(WithDescription) in the sidebar, switch brand to Lightn via the toolbar dropdown, inspect the "Accessibility" panel to see violations live.
 
 ---
 
 # v1 findings (repo source) — historical
 
-The v1 audit below was run against the git `master` branch at commit `4f997c4` (npm version `1.0.1`). All 5 distinct v1 violations (**marked with ⚠ below**) **persisted into v2** against the published npm 1.0.107 package. v1 findings are retained here for traceability — for the authoritative audit see [v2 findings above](#v2-findings-against-published-npm-1107).
+The v1 audit below was run against the git `master` branch at commit `4f997c4` (npm version `1.0.1`). All 5 distinct v1 violations **persisted into v3** against the published npm 1.0.107 package. v1 findings are retained here for traceability — for the authoritative audit see [v3 findings above](#v3-findings-against-published-npm-1107).
 
 ---
 
@@ -172,18 +211,19 @@ The 5 violations documented below are against code that **may not match producti
 
 **Treat these findings as a baseline of the repo state, not as a definitive audit of `theme.lightn.co.nz`.**
 
-### Path forward (pending — not yet executed)
+### Path forward
 
-1. Re-run the audit against the **published npm package** (`ece-docs-components@1.0.107`) instead of local source — by installing from npm and removing the Vite/Vitest `ece-docs-components` → `src` alias.
-2. Request read access to the actual current source from the repo owner (Richard McNulty / RedSunMaster) for a definitive source-level audit.
-3. Update this document with a v2 audit once the npm-based findings are available.
+- ✅ **Done (v2):** Re-run the audit against the **published npm package** (`ece-docs-components@1.0.107`) instead of local source.
+- ✅ **Done (v3):** Re-run with `@storybook/test-runner` (Playwright Chromium) to capture `color-contrast` violations that jest-axe misses.
+- [ ] Request read access to the actual current source from the repo owner (Richard McNulty / RedSunMaster) for a definitive source-level fix.
 
 ### Revision history
 
 | Date | Revision | Notes |
 |---|---|---|
 | 28 Jul 2026 | v1 — repo source audit | Initial findings against git `master` at `4f997c4` (npm `1.0.1`). Caveat above added same day after discovering source/production drift. |
-| 28 Jul 2026 | v2 — published npm package audit | Re-run against `ece-docs-components@1.0.107` from npm registry (commit `a3a1caf`). All 5 v1 violations persisted; 2 new violations (NoteBox regression + SidebarV2 new component). See v2 section above. |
+| 28 Jul 2026 | v2 — published npm package audit | Re-run against `ece-docs-components@1.0.107` from npm registry. jest-axe in jsdom (no color-contrast). All 5 v1 violations persisted; 2 new. |
+| 28 Jul 2026 | v3 — test-runner (real browser) audit | Re-run same npm package via @storybook/test-runner in Playwright Chromium. Added color-contrast detection (8 new Lightn-specific failures). Total: 36 failures across 9 violation types. |
 
 ---
 

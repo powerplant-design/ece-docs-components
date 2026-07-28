@@ -5,6 +5,25 @@ import { ThemeProvider } from 'ece-docs-components';
 type Brand = 'ECE' | 'School' | 'GP' | 'Lightn';
 
 const preview: Preview = {
+  parameters: {
+    a11y: {
+      // Fail loudly on every axe violation across all stories (including
+      // color-contrast, since Vitest addon runs axe in real Chromium).
+      test: 'error',
+      options: {
+        // WCAG 2.0 A/AA + 2.1 A/AA + 2.2 AA + best practices.
+        // 2.2 AA adds rules like target-size, focus-appearance, dragging.
+        runOnly: [
+          'wcag2a',
+          'wcag2aa',
+          'wcag21a',
+          'wcag21aa',
+          'wcag22aa',
+          'best-practice',
+        ],
+      },
+    },
+  },
   globalTypes: {
     brand: {
       description: 'Brand theme',

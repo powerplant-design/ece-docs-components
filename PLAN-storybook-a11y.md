@@ -1,25 +1,25 @@
 # Plan: Storybook Design System with A11y Testing (Inside-Repo)
 
-## ✅ Status — v2 retarget complete (28 Jul 2026, commit `a3a1caf`)
+## ✅ Status — v3 complete (28 Jul 2026)
 
-The audit harness has been **retargeted from stale repo source (v1.0.1) to the published npm package `ece-docs-components@1.0.107`** — the actual artifact consumed by `theme.lightn.co.nz` in production. The "Source vs Production Drift" concern below has been resolved by switching the audit target. The drift section is retained below for context.
+The audit harness now uses **`@storybook/test-runner` with Playwright Chromium** against the published npm package `ece-docs-components@1.0.107`. This replaces the v2 jest-axe/jsdom approach. Key wins:
+- **`color-contrast` violations now detected** (jest-axe skipped them)
+- **Real browser rendering** — no mock/ polyfill hacks for `matchMedia`, `getComputedStyle`, etc.
+- **Per-brand CLI** — `BRAND=Lightn npm run test-a11y` injects `&globals=brand:Lightn` via route interception in the test-runner's `preVisit` hook
 
-### What changed from v1 (repo-source audit at 1.0.1) to v2 (npm-package audit at 1.0.107)
+### What changed from v2 (jest-axe, jsdom) to v3 (test-runner, Playwright Chromium)
 
-| Aspect | v1 (commit `b0a49b6`) | v2 (commit `a3a1caf`) |
+| Aspect | v2 (jest-axe) | v3 (test-runner) |
 |---|---|---|
-| Audit target | `src/components/*` (local source, live alias) | `node_modules/ece-docs-components/dist/*` (npm published) |
-| Library version | 1.0.1 (git commit `4f997c4` only) | 1.0.107 (npm latest at audit time) |
-| Components covered | 22 | 29 (8 new + DefinitionBox removed) |
-| Brands | 3 (default / school / health) | 4 (Lightn / ECE / School / GP) |
-| ThemeProvider API | `<ThemeProvider><ThemeSync brand={...} /></ThemeProvider>` | `<ThemeProvider theme={brand}>` |
-| Total axe assertions | 87 | 124 |
-| Tests passing | 72 | 96 |
-| Tests failing (a11y violations) | 15 | 28 |
-| Distinct violation types | 5 | 7 |
-| Live-source feedback loop | Yes (Vite alias to `src/`) | **No** (alias removed; ops on `dist/`) |
+| Test environment | jsdom (mock DOM) | Playwright Chromium (real browser) |
+| `color-contrast` | ❌ Excluded by default | ✅ Active — 8 Lightn-specific violations found |
+| Total tests | 124 | 114 |
+| Tests pass | 96 | 78 |
+| Tests fail | 28 | 36 |
+| Brand-specific findings | ❌ None detected | ✅ 4 Lightn-specific contrast issues |
+| Execution | `vitest` (in-process) | `test-storybook` (CLI, per-brand via BRAND env var) |
 
-### Infra changes applied in v2
+### Infra changes applied in v3
 
 - `package.json` — added `ece-docs-components@^1.0.107` (runtime dep) + `react-toastify@^11.0.5` (new required peer dep, used by 1.0.107's ThemeProvider which now also renders `<CssBaseline/>` and `<ToastContainer/>`)
 - `.storybook/main.ts` — removed the `viteFinal` `ece-docs-components -> src` alias; imports now resolve from `node_modules/`
@@ -47,23 +47,23 @@ AcknowledgementBox, AutocompleteSelect, ExpandingBox, ExpandingBoxToggle, FileUp
 | Breadcrumb | `dropdownItems` changed from `string[]` to `BreadcrumbItem[]` (`{label, href?}[]`); added required `pathname` |
 | Concertina | `content` prop widened from `string` to `React.ReactNode` (now allows `<p>` etc.) |
 
-### v2 audit findings (against published npm 1.0.107) — 7 distinct violations × 4 brands = 28 failures
+### v3 audit findings (against published npm 1.0.107) — 9 distinct violations × 4 brands = 36 failures
 
-| # | Component | axe rule | Status vs v1 |
+| # | Component | axe rule | Notes |
 |---|---|---|---|
-| 1 | Breadcrumb | `landmark-unique` | **Persisted** from v1 — `<Box component="nav">` and inner MUI `<Breadcrumbs>` both render `<nav>` with no disambiguating `aria-label` |
-| 2 | Header | `button-name` | **Persisted + worsened** — v1 had 1 unlabelled search button; v2 has 3 unlabelled `IconButton`s (menu toggle, desktop search, mobile search) at `Header.js:462` |
-| 3 | NoteBox | `button-name` | **New regression** — new `EditButton` (`NoteBox.js:82`, `edit-button` className) is an icon-only `IconButton` with no `aria-label`; not present in v1 |
-| 4 | Progress | `aria-progressbar-name` | **Persisted** — `LinearProgress` at `Progress.js:19` still has no `aria-label` |
-| 5 | Select | `aria-input-field-name` | **Persisted** — `StyledSelect` at `Select.js:57` still uses same `id` for `htmlFor` (label) and Select's own `id`, causing `aria-labelledby` self-reference |
-| 6 | Sidebar (v1) | `list` | **Persisted** — `<ul>` wraps `<Box>` (rendered as `<div>`) before `<li>` items |
-| 7 | SidebarV2 (new) | `nested-interactive` | **New component, new violation** — `ListItemButton` (interactive) contains focusable descendants; nested interactive elements |
+| 1 | Breadcrumb | `landmark-unique` | Persisted from v1 |
+| 2 | Header | `button-name` (×3) | Persisted + worsened |
+| 3 | NoteBox | `button-name` | Persisted regression |
+| 4 | Progress | `aria-progressbar-name` | Persisted |
+| 5 | Select | `aria-input-field-name` (×6) | Persisted |
+| 6 | Sidebar (v1) | `list` (×3) | Persisted |
+| 7 | SidebarV2 | `button-name` | New (replaces v2's `nested-interactive`) |
+| 8 | Input / Select (error) | `color-contrast` | **NEW — Lightn only** — #f56b6b on #fdfcee, ratio 2.82 |
+| 9 | Checkbox / Select / Progress | `color-contrast` | **NEW — Lightn only** — #93826e on #fdfcee, ratio 3.59 |
 
-**Full v1 → v2 comparison:** all 5 original v1 violations persisted through 106 intervening npm publishes. NoteBox regressed (gained a new violation). SidebarV2 shipped with a new violation out of the gate. **The npm package has not received a11y improvements between 1.0.1 and 1.0.107.**
+**28 structural violations + 8 colour-contrast violations (Lightn brand only) = 36 total.** See `AUDIT-FINDINGS.md` for the full write-up with suggested fixes.
 
-See `AUDIT-FINDINGS.md` for the full write-up with suggested fixes.
-
-### What v2 cannot tell us (audit gaps)
+### What v3 cannot tell us (audit gaps)
 
 - **Source-level conventions** — we're testing compiled `dist/`, not source. Code-level patterns (e.g., is the `#` a click-to-focus anchor handler?) aren't visible.
 - **Diffs between intermediate versions** — we know 1.0.1 vs 1.0.107; we don't know when each violation was introduced or whether any were briefly fixed and reverted.
@@ -88,16 +88,13 @@ See `AUDIT-FINDINGS.md` for the full write-up with suggested fixes.
 
 The 5 axe violations documented in `AUDIT-FINDINGS.md` are against repo source at `1.0.1`. The live site runs a much newer version (likely `1.0.107`). Until the audit is re-run against the actual published npm package, the findings describe the **stale repo state, not production**. Some violations may already be fixed; new ones may exist that 1.0.1 didn't have.
 
-### Path forward — switch audit to the published npm package
+### Path forward — completed
 
-1. Replace the live-source alias with the published npm artifact:
-   - `package.json` — swap `"ece-docs-components": "file:."` (implicit self-reference via alias) for `"ece-docs-components": "^1.0.107"` installed from npm registry.
-   - `.storybook/main.ts` — remove the `viteFinal` alias `'ece-docs-components' -> join(... '..', 'src')`. Let Vite resolve `ece-docs-components` from `node_modules/` as a normal dep.
-   - `vitest.config.ts` — remove the `resolve.alias` `'ece-docs-components' -> resolve(__dirname, 'src')`. Let Vitest import from `node_modules/ece-docs-components/dist/`.
-2. Re-run `npm run test:a11y` and `npm run build-storybook`. All stories/tests now exercise the actual published artifact that `theme.lightn.co.nz` consumes.
-3. Generate a new audit diff: which of the 5 original violations persist? Which are fixed? Which new ones appear?
-4. Update `AUDIT-FINDINGS.md` to reflect the production-package audit and note the original repo-source findings as historical context.
-5. Document in this plan that `src/components/`, `.storybook/`, and `src/stories/`/`src/__tests__/` no longer have the live-source feedback loop — component edits won't reflect in Storybook until the npm package is updated. This is acceptable for an audit (we're testing, not editing).
+1. ✅ Replaced live-source alias with published npm artifact (`ece-docs-components@^1.0.107`)
+2. ✅ Re-ran test harness against actual npm artifact
+3. ✅ Generated v2 audit diff (28 structural violations persisted; 2 new)
+4. ✅ Escalated to v3: replaced jest-axe with test-runner (Playwright Chromium) for real color-contrast detection — 8 new Lightn-specific contrast violations found
+5. ✅ Updated `AUDIT-FINDINGS.md` with v3 findings and historical context
 
 ### What we cannot audit without source access
 
