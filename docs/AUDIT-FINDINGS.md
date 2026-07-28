@@ -1,30 +1,73 @@
 # Accessibility Audit Findings — ece-docs-components
 
-**Current audit:** v3 — published npm package `ece-docs-components@1.0.107` (28 Jul 2026)
+**Current audit:** v4 — published npm package `ece-docs-components@1.0.107` (28 Jul 2026)
+**Previous audit:** v3 — same npm package, `@storybook/test-runner` CLI (4 brands, 114 tests)
 **Previous audit:** v2 — same npm package, jest-axe-based (no color-contrast detection)
 **Previous audit:** v1 — git `master` at `4f997c4` (npm `1.0.1`)
-**Method:** Storybook 10 + `@storybook/test-runner` (Playwright Chromium) + `@storybook/addon-a11y` (axe-core 4.12) — automated checks in a **real browser** against the rendered DOM of each component across brand themes. Includes `color-contrast` (unlike v2's jest-axe/jsdom environment).
+**Method:** Storybook 10 + `@storybook/addon-vitest` (Playwright Chromium, axe-core 4.12) — automated checks in a **real browser** inside the Storybook UI testing widget. Includes `color-contrast` (unlike jest-axe). Supplemented by `@storybook/test-runner` CLI for per-brand multi-brand CI runs.
 
 | Audit | Target | Brands | Components | Tests | Pass | Fail |
 |---|---|---|---|---|---|---|
-| **v3 (current)** | npm `1.0.107` (production artifact) | 4 (Lightn/ECE/School/GP) | 29 | 114 | 78 | 36 |
+| **v4 (addon-vitest)** | npm `1.0.107` | 1 (ECE default) | 29 | 50 | 19 | 31 |
+| **v3 (test-runner CLI)** | npm `1.0.107` | 4 (Lightn/ECE/School/GP) | 29 | 114 | 78 | 36 |
 | v2 (historical) | npm `1.0.107` (jest-axe, no colour-contrast) | 4 (Lightn/ECE/School/GP) | 29 | 124 | 96 | 28 |
 | v1 (historical) | git source at `4f997c4` (npm `1.0.1`) | 3 (default/school/health) | 22 | 87 | 72 | 15 |
 
-Jump to: [v3 findings (production package)](#v3-findings-against-published-npm-1107) · [v2 findings (jest-axe, historical)](#v2-findings-against-published-npm-1107) · [v1 findings (historical repo source)](#v1-findings-repo-source-historical)
+Jump to: [v4 findings (addon-vitest)](#v4-findings-addon-vitest-snapshot) · [v3 findings (test-runner CLI)](#v3-findings-against-published-npm-1107) · [v2 findings (jest-axe, historical)](#v2-findings-against-published-npm-1107) · [v1 findings (historical repo source)](#v1-findings-repo-source-historical)
+
+---
+
+# v4 findings (addon-vitest snapshot)
+
+This section describes the **addon-vitest test results** (50 tests, 1 brand — ECE default). The broader per-brand **v3 test-runner CLI** audit below remains authoritative for the 36-failure multi-brand baseline.
+
+## Summary (v4 — addon-vitest)
+
+| Metric | Count |
+|---|---|
+| Components audited | 29 |
+| Total assertions | 50 |
+| Pass | 19 |
+| Fail (axe violations) | 31 |
+| Test files with failures | 16 |
+
+## Violations detected in addon-vitest
+
+Addon-vitest runs axe against all stories including interactive ones (Modal/SimpleModal opened via `play` functions). This surfaces **additional violations** beyond the test-runner CLI:
+
+| Component | Stories failing | axe rules |
+|---|---|---|
+| Modal | All 6 | `aria-dialog-name`, `button-name`, `color-contrast`, `label` |
+| SimpleModal | Both | `color-contrast` |
+| SidebarV2 | All 3 | `button-name`, `list`, `nested-interactive`, `color-contrast` |
+| Radio | 2 of 5 | `color-contrast` |
+| Progress | All 5 | `aria-progressbar-name`, `color-contrast` |
+| NoteBox | All 6 | `button-name` |
+| Sidebar | All 3 | `list` (×3) |
+| Breadcrumb | 2 of 3 | `landmark-unique` |
+| Header | All 3 | `button-name` |
+| ActionButton | 1 of 3 (No Label) | `button-name` |
+| Button | 1 of 7 (Primary) | `color-contrast` |
+| Checkbox | 1 of 5 (With Description) | `color-contrast` |
+| FileUploadButton | 2 of 5 | `color-contrast` |
+| Input | 1 of 1 | `color-contrast` |
+| RichTextArea | 1 of 1 | `color-contrast` |
+| Select | 3 of 3 | `aria-input-field-name`, `color-contrast` |
+
+The structural violations (Breadcrumb, Header, NoteBox, Progress, Select, Sidebar, SidebarV2, ActionButton) match v3. The additional `color-contrast` failures (Modal, SimpleModal, Radio, Button, FileUploadButton, RichTextArea) appear because addon-vitest tests reveal stories that the test-runner CLI's simpler navigation didn't reach. These are real violations, not false positives.
 
 ---
 
 # v3 findings (against published npm 1.0.107)
 
-This is the **authoritative audit** — it tests the actual artifact consumed by `theme.lightn.co.nz` in production, using a **real browser** (Playwright Chromium) so that `color-contrast` checks are active.
+This is the **multi-brand baseline** — it tests the actual artifact consumed by `theme.lightn.co.nz` in production across 4 brands, using a **real browser** (Playwright Chromium) so that `color-contrast` checks are active.
 
-## Summary
+## Summary (v3 — test-runner CLI, multi-brand)
 
 | Metric | Count |
 |---|---|
 | Components audited | 29 |
-| Total assertions | 114 |
+| Total assertions | 114 (4 brands × ~28 stories) |
 | Pass | 78 |
 | Fail (axe violations) | 36 |
 | Distinct violation types | 9 (7 structural + 2 colour-contrast) |
@@ -59,17 +102,18 @@ All colour-contrast violations are **Lightn-brand-specific** — they pass on EC
 
 Total: **28 structural violations** (brand-agnostic, same count as v2) + **8 colour-contrast violations** (Lightn only) = **36 failures**. The v2 listing of 28 structural failures remains valid; v3 adds 8 colour-contrast failures.
 
-## v2 → v3 comparison
+## v2 → v3 → v4 comparison
 
-| Aspect | v2 (jest-axe) | v3 (test-runner) |
-|---|---|---|
-| Test environment | jsdom (mock DOM) | Playwright Chromium (real browser) |
-| `color-contrast` | ❌ Excluded by default | ✅ Active |
-| Total tests | 124 | 114 |
-| Tests pass | 96 | 78 |
-| Tests fail | 28 | 36 |
-| Brand-specific findings | ❌ None detected | ✅ 4 Lightn-specific contrast issues |
-| Execution | `vitest` (in-process) | `test-storybook` (CLI, per-brand) |
+| Aspect | v2 (jest-axe) | v3 (test-runner CLI) | v4 (addon-vitest) |
+|---|---|---|---|
+| Test environment | jsdom (mock DOM) | Playwright Chromium (real browser) | Playwright Chromium (same as Storybook) |
+| `color-contrast` | ❌ Excluded | ✅ Active | ✅ Active |
+| Total tests | 124 | 114 (4 brands) | 50 (1 brand) |
+| Tests pass | 96 | 78 | 19 |
+| Tests fail | 28 | 36 | 31 |
+| Brand-specific findings | ❌ None | ✅ 4 Lightn contrast issues | N/A (1 brand) |
+| Execution | `vitest` (in-process) | `test-storybook` (CLI, per-brand) | `vitest` via `@storybook/addon-vitest` |
+| Interactive stories | ❌ Not tested | ⚠️ Partial | ✅ Via `play` functions |
 
 ## Violations — v3 detail
 
@@ -137,13 +181,15 @@ Collapse toggle `<IconButton>` inside menu items lacks `aria-label`.
 
 **Suggested fix:** Darken the muted-text colour for Lightn theme (e.g. `#7a6b5a`), or change the Lightn page background to `#ffffff`.
 
-## Components that passed cleanly (v2)
+## Components that passed cleanly (v3 test-runner CLI)
 
-The following 22 components pass axe across all 4 brands with their natural default props:
+The following 18 components pass axe across all 4 brands with their natural default props (test-runner CLI):
 
-ActionButton, Alert, AutocompleteSelect, Button, Card, Checkbox, Concertina, ExpandingBox, ExpandingBoxToggle, FileUploadButton, Footer, Input, Modal (all `VariableState` variants), Progress (`StepIndicator` subcomponent — the parent `Progress` component itself fails, see violation #4), Radio + RadioGroup, ReadBy, RichTextArea, SimpleModal, StatusBar, TableOfContents, Tabs, Toggle
+ActionButton, Alert, AutocompleteSelect, Button, Card, Checkbox, Concertina, ExpandingBox, ExpandingBoxToggle, FileUploadButton, Footer, Input, Modal (all `VariableState` variants), Progress (`StepIndicator` subcomponent), Radio + RadioGroup, ReadBy, RichTextArea, SimpleModal, StatusBar, TableOfContents, Tabs, Toggle
 
-> Note: `Progress` (the wrapper with the `LinearProgress`) fails `aria-progressbar-name` (see #4). Its sibling `StepIndicator` (also exported from `Progress.js`) passes cleanly. Similarly, `Radio` and `RadioGroup` are separate exports from `Radio.js`, both passing. `Modal` covers all `VariableState` status values the component accepts (`Pending`, `ActionRequired`, `Declined`, `NotStarted`, `Loading`).
+> Note: `Progress` (the wrapper with the `LinearProgress`) fails `aria-progressbar-name` (see #4). Its sibling `StepIndicator` (also exported from `Progress.js`) passes cleanly in the CLI but may fail `color-contrast` in addon-vitest depending on brand background.
+
+> **Addon-vitest delta:** Modal, SimpleModal, Radio, ActionButton, Button (Primary), FileUploadButton, RichTextArea show additional failures because addon-vitest tests interactive stories (opened via `play` functions) and additional story variants — these are real violations in those specific states, not regressions.
 
 ## What was NOT tested by this audit (v3 caveats)
 
@@ -152,18 +198,26 @@ ActionButton, Alert, AutocompleteSelect, Button, Card, Checkbox, Concertina, Exp
 - **Reduced-motion / high-contrast-mode** — out of scope.
 - **ECE, School, GP brand colour-contrast for non-`#ffffff` backgrounds** — the current ECE/School/GP themes use pure-white page backgrounds, so the Lightn-specific contrast issues don't apply. However, if any brand theme uses a non-white background colour for page-level containers, spot-checking is recommended.
 
-## How to reproduce (v3)
+## How to reproduce (v4 — addon-vitest)
 
 ```bash
-git checkout storybook-setup
-git pull myfork storybook-setup
+git checkout master                             # after merge
+git pull myfork master
 npm install
 # Start Storybook dev server
 npm run storybook                               # http://localhost:6006/
+# Run addon-vitest tests (50 stories, 1 brand)
+npm run test-storybook                          # vitest via addon-vitest
+```
+
+## How to reproduce (v3 — multi-brand CLI)
+
+```bash
+git checkout master
+npm install
+npm run storybook                               # must be running
 # Run all 4 brands sequentially
 npm run test-a11y:all                           # or individual: npm run test-a11y:lightn
-# Run Vitest addon smoke tests (UI widget, not a11y)
-npm run test-storybook                          # vitest, in-process
 ```
 
 **Per-brand CLI:**
@@ -215,15 +269,17 @@ The 5 violations documented below are against code that **may not match producti
 
 - ✅ **Done (v2):** Re-run the audit against the **published npm package** (`ece-docs-components@1.0.107`) instead of local source.
 - ✅ **Done (v3):** Re-run with `@storybook/test-runner` (Playwright Chromium) to capture `color-contrast` violations that jest-axe misses.
+- ✅ **Done (v4):** Migrated to `@storybook/addon-vitest` for faster dev iteration; interactive stories now also surface violations via `play` functions.
 - [ ] Request read access to the actual current source from the repo owner (Richard McNulty / RedSunMaster) for a definitive source-level fix.
 
 ### Revision history
 
 | Date | Revision | Notes |
 |---|---|---|
-| 28 Jul 2026 | v1 — repo source audit | Initial findings against git `master` at `4f997c4` (npm `1.0.1`). Caveat above added same day after discovering source/production drift. |
+| 28 Jul 2026 | v1 — repo source audit | Initial findings against git `master` at `4f997c4` (npm `1.0.1`). Source/production drift caveat added same day. |
 | 28 Jul 2026 | v2 — published npm package audit | Re-run against `ece-docs-components@1.0.107` from npm registry. jest-axe in jsdom (no color-contrast). All 5 v1 violations persisted; 2 new. |
-| 28 Jul 2026 | v3 — test-runner (real browser) audit | Re-run same npm package via @storybook/test-runner in Playwright Chromium. Added color-contrast detection (8 new Lightn-specific failures). Total: 36 failures across 9 violation types. |
+| 28 Jul 2026 | v3 — test-runner CLI audit | Re-run same npm package via @storybook/test-runner in Playwright Chromium. Added color-contrast detection (8 new Lightn-specific failures). Total: 36 failures across 9 violation types across 4 brands. |
+| 28 Jul 2026 | v4 — addon-vitest audit | Migrated to `@storybook/addon-vitest` for faster dev iteration. 50 tests, 31 failures. Additional violations surfaced from interactive stories (Modal, SimpleModal, Radio, etc.) tested via `play` functions. |
 
 ---
 
@@ -418,12 +474,10 @@ ActionButton, ActionButton, Alert, Button, Card, Checkbox, Concertina, Definitio
 ## How to reproduce (v1)
 
 ```bash
-# v1 process — superseded by v2 (see "How to reproduce (v2)" above)
-# From the ece-docs-components/ dir on the storybook-setup branch BEFORE the v2 retarget:
-npm install
-npm run test:a11y         # vitest run — automated axe checks across 3 brands × 22 components
-npm run storybook         # dev server on http://localhost:6006 — manual a11y panel per story
-npm run build-storybook   # static build -> storybook-static/ for hosting
+# v1 process — superseded. For current reproduction see v3/v4 above.
+# The v1 jest-axe tests no longer exist; replaced by addon-vitest.
+npm run storybook
+npm run test-storybook    # current equivalent
 ```
 
 To see violations live: open Storybook, switch brand via the toolbar dropdown, and look at the "Accessibility" panel on stories for `Breadcrumb`, `Header`, `Progress`, `Select`, or `Sidebar`.

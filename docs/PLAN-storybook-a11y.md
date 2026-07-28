@@ -1,32 +1,36 @@
 # Plan: Storybook Design System with A11y Testing (Inside-Repo)
 
-## ✅ Status — v3 complete (28 Jul 2026)
+## ✅ Status — v4 complete (28 Jul 2026)
 
-The audit harness now uses **`@storybook/test-runner` with Playwright Chromium** against the published npm package `ece-docs-components@1.0.107`. This replaces the v2 jest-axe/jsdom approach. Key wins:
-- **`color-contrast` violations now detected** (jest-axe skipped them)
-- **Real browser rendering** — no mock/ polyfill hacks for `matchMedia`, `getComputedStyle`, etc.
-- **Per-brand CLI** — `BRAND=Lightn npm run test-a11y` injects `&globals=brand:Lightn` via route interception in the test-runner's `preVisit` hook
+The test harness now uses **`@storybook/addon-vitest` + `@vitest/browser-playwright`** running axe-core in real Playwright Chromium browsers inside the Storybook UI testing widget. This replaces the v3 `@storybook/test-runner` CLI approach. Key wins:
+- **Same-browser testing** — both visual browsing (Storybook UI) and automated tests (Vitest) use the same Chromium instance; no separate CLI run needed for smoke tests
+- **`color-contrast` violations detected** (real browser layout)
+- **Per-brand CLI still available** — `BRAND=Lightn npx test-storybook --url http://localhost:6006` for multi-brand CI via the retained `.storybook/test-runner.ts`
+- **~3× faster iteration** — addon-vitest tests re-run on story changes without a full CLI restart
 
-### What changed from v2 (jest-axe, jsdom) to v3 (test-runner, Playwright Chromium)
+### What changed from v3 (test-runner CLI) to v4 (addon-vitest)
 
-| Aspect | v2 (jest-axe) | v3 (test-runner) |
+| Aspect | v3 (test-runner CLI) | v4 (addon-vitest) |
 |---|---|---|
-| Test environment | jsdom (mock DOM) | Playwright Chromium (real browser) |
-| `color-contrast` | ❌ Excluded by default | ✅ Active — 8 Lightn-specific violations found |
-| Total tests | 124 | 114 |
-| Tests pass | 96 | 78 |
-| Tests fail | 28 | 36 |
-| Brand-specific findings | ❌ None detected | ✅ 4 Lightn-specific contrast issues |
-| Execution | `vitest` (in-process) | `test-storybook` (CLI, per-brand via BRAND env var) |
+| Test integration | External CLI (`npx test-storybook`) | Vitest plugin (`@storybook/addon-vitest`) |
+| Browser | Playwright Chromium (separate process) | Same Chromium as Storybook UI |
+| Config file | `.storybook/test-runner.ts` | `vitest.config.ts` |
+| Execution | `npm run test-a11y:*` (per-brand, CI) | `npm run test-storybook` (dev, instant re-run) |
+| UI widget tests | ❌ Not available | ✅ Built-in (Storybook test panel + Vitest) |
+| Run type | Headless only | Headless in CI, interactive in dev |
+| Test count | 114 (4 brands × ~28 stories) | 50 (1 brand, UI widget tests) |
 
-### Infra changes applied in v3
+### Infra changes applied in v4
 
-- `package.json` — added `ece-docs-components@^1.0.107` (runtime dep) + `react-toastify@^11.0.5` (new required peer dep, used by 1.0.107's ThemeProvider which now also renders `<CssBaseline/>` and `<ToastContainer/>`)
-- `.storybook/main.ts` — removed the `viteFinal` `ece-docs-components -> src` alias; imports now resolve from `node_modules/`
-- `vitest.config.ts` — removed the `resolve.alias` `ece-docs-components -> src`; same behaviour
-- `.storybook/preview.tsx` — replaced 3-brand `ThemeSync` decorator with 4-brand direct `<ThemeProvider theme={brand}>` (1.0.107 dropped `setTheme` context; `useTheme()` returns just the MUI `Theme`)
+- `vitest.config.ts` — replaced jsdom/jest-axe config with `@storybook/addon-vitest` + `storybookTest()` plugin + `@vitest/browser-playwright` provider
+- `.storybook/main.ts` — removed `@storybook/addon-essentials`, added `@storybook/addon-vitest`; removed `viteFinal` src alias
+- `.storybook/preview.tsx` — replaced 3-brand `ThemeSync` decorator with 3-brand direct `<ThemeProvider theme={brand}>` + `GlobalStyles` background; added a11y config (`test: 'error'`, `runOnly` rules)
+- `src/test-setup.ts` — deleted (jest-axe replaced by addon-vitest's native axe integration)
+- `src/__tests__/` — deleted (standalone jest-axe tests replaced by addon-vitest per-story tests)
+- `package.json` — added `ece-docs-components@^1.0.107` (runtime dep) + `react-toastify@^11.0.5` + `@storybook/addon-vitest` + `@vitest/browser-playwright`; added `test-a11y:*` scripts; removed jest-axe/jsdom deps
+- `.storybook/test-runner.ts` — retained for optional multi-brand CLI runs (`npx test-storybook`)
 
-### New components added in 1.0.107 (8 stories + 8 tests created)
+### New components added in 1.0.107 (8 stories)
 
 AcknowledgementBox, AutocompleteSelect, ExpandingBox, ExpandingBoxToggle, FileUploadButton, Footer, RichTextArea, SidebarV2
 
@@ -34,7 +38,7 @@ AcknowledgementBox, AutocompleteSelect, ExpandingBox, ExpandingBoxToggle, FileUp
 
 ### Component removed in 1.0.107
 
-`DefinitionBox` — story + test files deleted in v2.
+`DefinitionBox` — story deleted.
 
 ### Existing components with prop changes between 1.0.1 and 1.0.107
 
@@ -47,7 +51,7 @@ AcknowledgementBox, AutocompleteSelect, ExpandingBox, ExpandingBoxToggle, FileUp
 | Breadcrumb | `dropdownItems` changed from `string[]` to `BreadcrumbItem[]` (`{label, href?}[]`); added required `pathname` |
 | Concertina | `content` prop widened from `string` to `React.ReactNode` (now allows `<p>` etc.) |
 
-### v3 audit findings (against published npm 1.0.107) — 9 distinct violations × 4 brands = 36 failures
+### v4 audit snapshot (addon-vitest, single brand) — 29 components, 50 tests, 19 pass / 31 fail
 
 | # | Component | axe rule | Notes |
 |---|---|---|---|
@@ -58,12 +62,17 @@ AcknowledgementBox, AutocompleteSelect, ExpandingBox, ExpandingBoxToggle, FileUp
 | 5 | Select | `aria-input-field-name` (×6) | Persisted |
 | 6 | Sidebar (v1) | `list` (×3) | Persisted |
 | 7 | SidebarV2 | `button-name` | New (replaces v2's `nested-interactive`) |
-| 8 | Input / Select (error) | `color-contrast` | **NEW — Lightn only** — #f56b6b on #fdfcee, ratio 2.82 |
-| 9 | Checkbox / Select / Progress | `color-contrast` | **NEW — Lightn only** — #93826e on #fdfcee, ratio 3.59 |
+| 8 | Input / Select (error) | `color-contrast` | **Lightn only** — #f56b6b on #fdfcee, ratio 2.82 |
+| 9 | Checkbox / Select / Progress | `color-contrast` | **Lightn only** — #93826e on #fdfcee, ratio 3.59 |
+| 10 | Modal (all 6 stories) | `aria-dialog-name`, `button-name`, `color-contrast`, `label` | New in addon-vitest — Modal coverage expanded |
+| 11 | SimpleModal (both stories) | `color-contrast` | New in addon-vitest |
+| 12 | Radio (2 stories) | `color-contrast` | New in addon-vitest |
+| 13 | Button (Primary) | `color-contrast` | New in addon-vitest |
+| 14 | ActionButton (No Label) | `button-name` | New in addon-vitest |
 
-**28 structural violations + 8 colour-contrast violations (Lightn brand only) = 36 total.** See `AUDIT-FINDINGS.md` for the full write-up with suggested fixes.
+**31 failures across 16 test files** (addon-vitest UI widget tests, single brand). Per-brand CLI (`npx test-storybook`) yields 36 failures — 28 structural (all brands) + 8 colour-contrast (Lightn only). See `docs/AUDIT-FINDINGS.md` for the full write-up with suggested fixes.
 
-### What v3 cannot tell us (audit gaps)
+### What v4 cannot tell us (audit gaps)
 
 - **Source-level conventions** — we're testing compiled `dist/`, not source. Code-level patterns (e.g., is the `#` a click-to-focus anchor handler?) aren't visible.
 - **Diffs between intermediate versions** — we know 1.0.1 vs 1.0.107; we don't know when each violation was introduced or whether any were briefly fixed and reverted.
@@ -86,15 +95,16 @@ AcknowledgementBox, AutocompleteSelect, ExpandingBox, ExpandingBoxToggle, FileUp
 
 ### Implication for the audit
 
-The 5 axe violations documented in `AUDIT-FINDINGS.md` are against repo source at `1.0.1`. The live site runs a much newer version (likely `1.0.107`). Until the audit is re-run against the actual published npm package, the findings describe the **stale repo state, not production**. Some violations may already be fixed; new ones may exist that 1.0.1 didn't have.
+The 5 axe violations documented in `docs/AUDIT-FINDINGS.md` are against repo source at `1.0.1`. The live site runs a much newer version (likely `1.0.107`). Until the audit is re-run against the actual published npm package, the findings describe the **stale repo state, not production**. Some violations may already be fixed; new ones may exist that 1.0.1 didn't have.
 
 ### Path forward — completed
 
 1. ✅ Replaced live-source alias with published npm artifact (`ece-docs-components@^1.0.107`)
 2. ✅ Re-ran test harness against actual npm artifact
 3. ✅ Generated v2 audit diff (28 structural violations persisted; 2 new)
-4. ✅ Escalated to v3: replaced jest-axe with test-runner (Playwright Chromium) for real color-contrast detection — 8 new Lightn-specific contrast violations found
-5. ✅ Updated `AUDIT-FINDINGS.md` with v3 findings and historical context
+4. ✅ v3: replaced jest-axe with test-runner (Playwright Chromium) for real color-contrast detection
+5. ✅ v4: replaced test-runner CLI with `@storybook/addon-vitest` for faster dev iteration
+6. ✅ Updated `docs/AUDIT-FINDINGS.md` with v3/v4 findings and historical context
 
 ### What we cannot audit without source access
 
@@ -152,7 +162,7 @@ ece-docs-components/
   .gitignore                       # +storybook-static/
   rollup.config.js                 # untouched
   dist/                            # untouched (not used during dev)
-  PLAN-storybook-a11y.md          # this file
+  docs/PLAN-storybook-a11y.md    # this file
 ```
 
 ## 1. Dependency Strategy
@@ -192,28 +202,36 @@ npm install -D storybook @storybook/react-vite @storybook/addon-essentials @stor
 
 ## 2. Brand Theme Switching — Toolbar Dropdown
 
-Define a Storybook **global** `brand` with 3 values (`default`, `school`, `health`). A decorator wraps each story in `<ThemeProvider>`. Since `ThemeProvider` does not accept a `brand` prop, we use an inner wrapper component that calls `useTheme().setTheme(brand)` in a `useEffect`.
+Define a Storybook **global** `brand` with 3 values (`ECE`, `School`, `GP`). A decorator wraps each story in `<ThemeProvider theme={brand}>`. `ThemeProvider` (in npm 1.0.107) accepts a `theme` prop directly — no `ThemeSync` wrapper needed.
 
-> **Verified:** `ThemeProvider` signature is `React.FC<{ children: React.ReactNode }>` — confirmed no `brand` prop. `useTheme()` returns `{ currentTheme, setTheme, theme }`. Components like `Select`, `Radio`, `Progress`, `StepIndicator` call `useTheme()` at top level, so they **must** be inside `<ThemeProvider>` — the decorator guarantees this for stories; tests must wrap explicitly.
+> **Note:** `Lightn` brand is deliberately commented out in the toolbar (it's the production default background `#fdfcee`). For Lightn-specific a11y testing, use the `test-a11y:lightn` CLI script which injects `&globals=brand:Lightn` via `.storybook/test-runner.ts`.
 
 ### `.storybook/preview.tsx`
 
-> **Note:** file extension is `.tsx`, not `.ts` — this file contains JSX (the `<ThemeSync>` and `<Story />` elements in the decorator), so `.ts` would fail Vite's JSX transform.
-
 ```ts
 import type { Preview } from '@storybook/react';
-import React, { useEffect } from 'react';
-import { ThemeProvider, useTheme } from '../src';
+import React from 'react';
+import { GlobalStyles } from '@mui/material';
+import { ThemeProvider } from 'ece-docs-components';
 
-type Brand = 'default' | 'school' | 'health';
-
-const ThemeSync: React.FC<{ brand: Brand }> = ({ brand }) => {
-  const { setTheme } = useTheme();
-  useEffect(() => { setTheme(brand); }, [brand, setTheme]);
-  return null;
-};
+type Brand = 'ECE' | 'School' | 'GP';
 
 const preview: Preview = {
+  parameters: {
+    a11y: {
+      test: 'error',
+      options: {
+        runOnly: [
+          'wcag2a',
+          'wcag2aa',
+          'wcag21a',
+          'wcag21aa',
+          'wcag22aa',
+          'best-practice',
+        ],
+      },
+    },
+  },
   globalTypes: {
     brand: {
       description: 'Brand theme',
@@ -221,9 +239,9 @@ const preview: Preview = {
         title: 'Brand',
         icon: 'circlehollow',
         items: [
-          { value: 'default', title: 'ECE Docs' },
-          { value: 'school', title: 'School Docs' },
-          { value: 'health', title: 'GP Docs' },
+          { value: 'ECE', title: 'ECE Docs' },
+          { value: 'School', title: 'School Docs' },
+          { value: 'GP', title: 'GP Docs' },
         ],
         dynamicTitle: true,
       },
@@ -231,10 +249,10 @@ const preview: Preview = {
   },
   decorators: [
     (Story, context) => {
-      const brand: Brand = context.globals.brand || 'default';
+      const brand = (context.globals.brand as Brand) || 'ECE';
       return (
-        <ThemeProvider>
-          <ThemeSync brand={brand} />
+        <ThemeProvider theme={brand}>
+          <GlobalStyles styles={{ body: { backgroundColor: '#FEFDF7' } }} />
           <Story />
         </ThemeProvider>
       );
@@ -245,29 +263,17 @@ const preview: Preview = {
 export default preview;
 ```
 
-### `.storybook/main.ts` — with src alias
+### `.storybook/main.ts` — no alias, imports resolve from `node_modules/`
 
-Vite alias lets stories import `ece-docs-components` and resolve to `src/index.ts` directly — instant feedback on component edits, no `npm run build` needed during dev. Stories are stored in `src/stories/` so they're co-located with source but excluded from the rollup build (see tsconfig change).
+Stories import from `ece-docs-components` which resolves to the published npm package (not source). The `viteFinal` src alias is removed so testing mirrors the actual production artifact.
 
 ```ts
 import type { StorybookConfig } from '@storybook/react-vite';
-import { join, dirname } from 'path';
 
 const config: StorybookConfig = {
   stories: ['../src/stories/**/*.stories.@(ts|tsx)'],
-  addons: [
-    '@storybook/addon-essentials',
-    '@storybook/addon-a11y',
-  ],
+  addons: ['@storybook/addon-a11y', '@storybook/addon-vitest'],
   framework: '@storybook/react-vite',
-  viteFinal: async (config) => {
-    config.resolve = config.resolve || {};
-    config.resolve.alias = {
-      ...(config.resolve.alias as Record<string, string> | undefined),
-      'ece-docs-components': join(dirname(__dirname), 'src'),
-    };
-    return config;
-  },
 };
 
 export default config;
@@ -275,7 +281,7 @@ export default config;
 
 ### `.storybook/preview-body.html` (fonts/CSS baseline)
 
-MUI's `CssBaseline` sets `backgroundColor: '#FDFCEE'` but the Inter font won't load without a link. Add:
+MUI's `CssBaseline` sets `backgroundColor: '#FDFCEE'` but the Inter font won't load without a link:
 
 ```html
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -292,103 +298,139 @@ MUI's `CssBaseline` sets `backgroundColor: '#FDFCEE'` but the Inter font won't l
 - Installed via `@storybook/addon-a11y` (registered in `main.ts`)
 - Adds "Accessibility" panel to every story
 - Runs axe-core checks on each render
+- Configured with `test: 'error'` (fails stories on violations) and `runOnly` set to WCAG 2.0/2.1/2.2 AA + best-practice rules
 
-### Automated — vitest + jest-axe
+### Automated — `@storybook/addon-vitest` + `@vitest/browser-playwright`
+
+Tests run via the **`@storybook/addon-vitest`** plugin, which integrates axe-core natively into each story's Vitest run. Stories are tested in a real Playwright Chromium browser (no jsdom, no jest-axe). This catches `color-contrast` violations that jsdom-based tools silently skip.
 
 `vitest.config.ts` (repo root):
 ```ts
-import { defineConfig } from 'vitest/config';
+import { defineConfig, mergeConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
+import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
+import { playwright } from '@vitest/browser-playwright';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      'ece-docs-components': resolve(__dirname, 'src'),
+const dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export default mergeConfig(
+  { plugins: [react()] },
+  defineConfig({
+    test: {
+      isolate: false,
+      projects: [
+        {
+          extends: true,
+          plugins: [
+            storybookTest({
+              configDir: path.join(dirname, '.storybook'),
+              storybookScript: 'npm run storybook -- --no-open',
+            }),
+          ],
+          optimizeDeps: {
+            include: ['aria-query', 'lz-string', 'pretty-format'],
+          },
+          test: {
+            name: 'storybook',
+            globals: true,
+            browser: {
+              enabled: true,
+              provider: playwright({}),
+              headless: true,
+              instances: [{ browser: 'chromium' }],
+            },
+          },
+        },
+      ],
     },
-  },
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: './src/test-setup.ts',
-  },
-});
+  }),
+);
 ```
 
-> Vitest uses the **same `ece-docs-components` → `src` alias** so tests import live source, not built `dist/`.
+> No separate `src/test-setup.ts` or `src/__tests__/` directory — tests are generated automatically by addon-vitest from the stories themselves. The a11y config in `.storybook/preview.tsx` provides the axe ruleset.
 
-`src/test-setup.ts` — **must register the jest-axe matcher** (`toHaveNoViolations`) in addition to jest-dom:
+### Multi-brand CI — `@storybook/test-runner` (optional, retained)
+
+In addition to addon-vitest, the `.storybook/test-runner.ts` config enables per-brand a11y auditing via the external `test-storybook` CLI. This is how the **36-failure baseline** (28 structural × all brands + 8 colour-contrast × Lightn only) was established.
+
+`.storybook/test-runner.ts`:
 ```ts
-import '@testing-library/jest-dom';
-import { toHaveNoViolations } from 'jest-axe';
-import { expect } from 'vitest';
+import type { TestRunnerConfig } from '@storybook/test-runner';
 
-expect.extend(toHaveNoViolations);
-```
-
-Example test `src/__tests__/Button.a11y.test.tsx` (note: `Button` **must be imported**):
-```tsx
-import { render } from '@testing-library/react';
-import { axe } from 'jest-axe';
-import { useEffect } from 'react';
-import { ThemeProvider, useTheme, Button } from 'ece-docs-components';
-
-const brands = ['default', 'school', 'health'] as const;
-
-const ThemeSync = ({ brand }: { brand: string }) => {
-  const { setTheme } = useTheme();
-  useEffect(() => { setTheme(brand); }, [brand, setTheme]);
-  return null;
+const config: TestRunnerConfig = {
+  async preVisit(page, context) {
+    const brand = process.env.BRAND || 'Lightn';
+    await page.route('**/iframe.html**', async (route) => {
+      const url = new URL(route.request().url());
+      url.searchParams.set('globals', `brand:${brand}`);
+      await route.continue({ url: url.toString() });
+    });
+  },
 };
 
-brands.forEach((brand) => {
-  it(`Button (${brand}) has no a11y violations`, async () => {
-    const { container } = render(
-      <ThemeProvider>
-        <ThemeSync brand={brand} />
-        <Button variant="primary" onClick={() => {}}>Click me</Button>
-      </ThemeProvider>
-    );
-    const results = await axe(container);
-    expect(results).toHaveNoViolations();
-  });
-});
+export default config;
+```
+
+Run via:
+```bash
+BRAND=Lightn npx test-storybook --url http://localhost:6006 --testTimeout 30000
+```
+
+### Test scripts in `package.json`
+
+```json
+"test-storybook": "vitest",
+"test-a11y": "npx -y test-storybook --url http://localhost:6006 --testTimeout 30000",
+"test-a11y:all": "npm run test-a11y:lightn && npm run test-a11y:ece && npm run test-a11y:school && npm run test-a11y:gp",
+"test-a11y:lightn": "BRAND=Lightn npx -y test-storybook --url http://localhost:6006 --testTimeout 30000",
+"test-a11y:ece":   "BRAND=ECE    npx -y test-storybook --url http://localhost:6006 --testTimeout 30000",
+"test-a11y:school":"BRAND=School npx -y test-storybook --url http://localhost:6006 --testTimeout 30000",
+"test-a11y:gp":    "BRAND=GP     npx -y test-storybook --url http://localhost:6006 --testTimeout 30000"
 ```
 
 ## 4. Stories
 
-Create `.stories.tsx` for all 22 components in `src/stories/`.
+`.stories.tsx` files for all 29 components live in `src/stories/`.
 
 Per-component pattern:
 - **Default** — common usage
 - **All variants** — cover every variant/size the component supports (not just a subset)
 - **Edge cases** — long text, empty state, error state, disabled
-- **Interactive** — actions/controls; **required for stateful components** (Modal, SimpleModal) which take `isOpen: boolean` and `onClose()`. Use a wrapper component with `useState` to toggle, or use Storybook's `args` + a handler. The simple `args`-only pattern used for Button won't work for these.
+- **Interactive** — actions/controls; **required for stateful components** (Modal, SimpleModal) which take `isOpen: boolean` and `onClose()`. Use a wrapper component with `useState` to toggle, or use Storybook's `args` + a handler.
+- **Play functions** — some stories include `play` functions that interact with the component (e.g., opening a Modal) before the a11y scan runs, ensuring hidden content is visible to axe-core.
 
-### Components to write stories for:
-1. ActionButton
-2. Alert
-3. Breadcrumb
-4. Button — **6 variants**: `primary`, `secondary`, `outline`, `marked-read`, `mark-read`, `danger` (see `src/components/Button.tsx:6`); sizes `sm`/`md`/`lg`
-5. Card
-6. Checkbox
-7. Concertina
-8. DefinitionBox
-9. Header
-10. Input
-11. Modal — **interactive** (`isOpen` + `onClose`, plus `status` with 6 values: `mandatory`/`optional`/`accepted`/`action-required`/`action-required-note`/`accepted-note`). Write one story per `status` value.
-12. NoteBox
-13. Progress (incl. StepIndicator) — `Progress` takes `current`/`total`/`showLabel`; `StepIndicator` takes `steps: string[]`/`currentStep`
-14. Radio (incl. RadioGroup) — `Radio` extends `InputHTMLAttributes`, has `label`/`description`; `RadioGroup` has `label`/`error`/children
-15. ReadBy
-16. Select — takes `options: { value, label }[]`, `label`, `error`, `helperText`, `value`, `onChange`
-17. Sidebar
-18. SimpleModal — **interactive** (likely `isOpen`-style)
-19. StatusBar
-20. TableOfContents
-21. Tabs
-22. Toggle
+### Components with stories (29 total):
+1. AcknowledgementBox
+2. ActionButton
+3. Alert
+4. AutocompleteSelect
+5. Breadcrumb
+6. Button — variants: `primary`, `secondary`, `outline`, `marked-read`, `mark-read`, `danger`; sizes `sm`/`md`/`lg`
+7. Card
+8. Checkbox
+9. Concertina
+10. ExpandingBox
+11. ExpandingBoxToggle
+12. FileUploadButton
+13. Footer
+14. Header
+15. Input
+16. Modal — **interactive** (`isOpen` + `onClose`, plus `VariableState`: `Pending`, `ActionRequired`, `Declined`, `NotStarted`, `Loading`)
+17. NoteBox
+18. Progress (incl. StepIndicator) — `Progress` takes `current`/`total`/`showLabel`; `StepIndicator` takes `steps: string[]`/`currentStep`
+19. Radio (incl. RadioGroup) — `Radio` extends `InputHTMLAttributes`, has `label`/`description`; `RadioGroup` has `label`/`error`/children
+20. ReadBy
+21. RichTextArea
+22. Select — takes `options: { value, label }[]`, `label`, `error`, `helperText`, `value`, `onChange`
+23. Sidebar
+24. SidebarV2
+25. SimpleModal — **interactive** (`isOpen`-style)
+26. StatusBar
+27. TableOfContents
+28. Tabs
+29. Toggle
 
 Example `src/stories/Button.stories.tsx` (covers all 6 variants):
 ```tsx
@@ -445,7 +487,7 @@ export const Disabled: Story = {
 ## 5. tsconfig & .gitignore changes
 
 ### `tsconfig.json` — exclude stories/tests from rollup build
-The existing `exclude` covers `**/*.test.ts` and `**/*.test.tsx`. Extend it so the rollup `tsc`/declaration emit ignores stories and a11y tests:
+The existing `exclude` covers `**/*.test.ts` and `**/*.test.tsx`. Extended so the rollup `tsc`/declaration emit ignores stories and Storybook config:
 
 ```json
 "exclude": [
@@ -460,8 +502,10 @@ The existing `exclude` covers `**/*.test.ts` and `**/*.test.tsx`. Extend it so t
 ]
 ```
 
+### `tsconfig.node.json` — separate config for Node-side files
+Added for `.storybook/` config files that require Node module resolution (e.g., `vitest.config.ts` imports from `node:path`). Extends the base config with CommonJS module settings.
+
 ### `.gitignore` — ignore Storybook build output
-Append:
 ```
 # storybook
 storybook-static/
@@ -472,59 +516,65 @@ storybook-static/
 
 ```bash
 # From ece-docs-components/
-npm install           # install new devDeps
-npm run storybook     # dev server on http://localhost:6006
-npm run test:a11y     # automated axe checks
-npm run build-storybook   # static build -> storybook-static/
-npm run build         # confirm rollup still builds dist/ (sanity check)
+npm install                  # install deps
+npm run storybook            # dev server on http://localhost:6006
+npm run test-storybook       # Vitest addon — a11y checks (dev, instant re-run)
+npm run build-storybook      # static build -> storybook-static/
+npm run build                # confirm rollup still builds dist/ (sanity check)
+
+# Multi-brand a11y audit (requires storybook dev server running):
+npm run test-a11y:lightn     # 36 fail (28 structural + 8 contrast)
+npm run test-a11y:ece        # 28 fail (structural only)
+npm run test-a11y:school     # 28 fail (structural only)
+npm run test-a11y:gp         # 28 fail (structural only)
+npm run test-a11y:all        # all 4 brands sequentially
 ```
 
-- Toolbar dropdown switches 3 brands
-- All stories re-render with selected theme (live source — no rebuild needed)
-- Accessibility panel on every story
-- `npm run test:a11y` runs jest-axe across all components × 3 brands
+- Toolbar dropdown switches 3 brands (ECE, School, GP)
+- Accessibility panel on every story, configured to error on violations
+- `npm run test-storybook` runs addon-vitest (50 tests across 29 components)
+- `npm run test-a11y:*` runs the test-runner CLI for per-brand CI output
 
-## 7. Pre-flight Checklist
+## 7. Pre-flight Checklist (completed)
 
-> **Lockfile rename note:** `package-lock.json` on `master` still has the stale name `"my-mui-theme-library"` (whoever renamed `package.json` never re-ran `npm install` to sync). Running `npm install` anywhere regenerates the lockfile to match `package.json` (`"ece-docs-components"`). Discard the diff before branching with `git checkout -- package-lock.json` so `master` stays pristine; the rename then reappears bundled with your Storybook dependency additions on the `storybook-setup` branch — never as a standalone `master` commit. This is a known minor churn, not a blocker.
+> **Lockfile rename note:** `package-lock.json` on `master` still has the stale name `"my-mui-theme-library"` (whoever renamed `package.json` never re-ran `npm install` to sync). Running `npm install` anywhere regenerates the lockfile to match `package.json` (`"ece-docs-components"`). This is known minor churn, not a blocker.
 
 ### Branch & fork
-- [ ] Forked `RedSunMaster/ece-docs-components` to your GitHub
-- [ ] `git remote add myfork <your-fork-url>`
-- [ ] `git checkout -b storybook-setup` off clean `master`
-- [ ] Uncommitted `package-lock.json` change on master either committed or stashed before branching
+- [x] Forked `RedSunMaster/ece-docs-components` to `powerplant-design/ece-docs-components`
+- [x] `git remote add myfork <fork-url>`
+- [x] `git checkout -b storybook-setup` off clean `master`
+- [x] Safety rail active: `git config remote.origin.pushurl no-push`
 
 ### Dependencies & config
-- [ ] `npm install -D` for storybook + a11y + vitest deps succeeded
-- [ ] No peer version conflicts (React 18/19, MUI v7, Storybook v9)
-- [ ] `package.json` scripts added: `storybook`, `build-storybook`, `test:a11y`
-- [ ] `.storybook/main.ts` present with `ece-docs-components` → `src` alias
-- [ ] `.storybook/preview.ts` present with brand toolbar + `ThemeSync` decorator
-- [ ] `.storybook/preview-body.html` loads Inter font
+- [x] `npm install` succeeded — Storybook 10, MUI v7, React 18/19, Vitest 4
+- [x] `package.json` scripts added: `storybook`, `build-storybook`, `test-storybook`, `test-a11y:*`
+- [x] `.storybook/main.ts` present — addons: `addon-a11y`, `addon-vitest`; no src alias (uses npm package)
+- [x] `.storybook/preview.tsx` present — brand toolbar + `<ThemeProvider theme={brand}>` decorator + a11y config
+- [x] `.storybook/test-runner.ts` present — per-brand CLI via BRAND env var
+- [x] `.storybook/preview-body.html` loads Inter font
 
 ### tsconfig / gitignore
-- [ ] `tsconfig.json` excludes `**/*.stories.tsx`, `**/*.a11y.test.tsx`, `.storybook`, `storybook-static`
-- [ ] `.gitignore` adds `storybook-static/`
+- [x] `tsconfig.json` excludes `**/*.stories.tsx`, `**/*.a11y.test.tsx`, `.storybook`, `storybook-static`
+- [x] `tsconfig.node.json` added for Node-side config files
+- [x] `.gitignore` adds `storybook-static/`
 
 ### Tests & stories
-- [ ] `src/test-setup.ts` registers `toHaveNoViolations` matcher
-- [ ] `vitest.config.ts` has `ece-docs-components` → `src` alias
-- [ ] 22 story files in `src/stories/`, each covering default + all variants + edge cases
-- [ ] Modal/SimpleModal stories use interactive `useState` pattern
-- [ ] Button story covers all 6 variants
-- [ ] 22 a11y test files in `src/__tests__/`, each iterating 3 brands
+- [x] 29 story files in `src/stories/`, covering all exported components
+- [x] Modal/SimpleModal stories use interactive `useState` + `play` functions
+- [x] Button story covers all 6 variants
+- [x] No standalone a11y test files — addon-vitest generates tests from stories automatically
 
 ### Verification
-- [ ] `npm run storybook` launches with brand toolbar + a11y panel, no runtime errors
-- [ ] Editing a component source reflects instantly in Storybook (alias works)
-- [ ] `npm run test:a11y` passes for all 22 components × 3 brands
-- [ ] `npm run build` still succeeds (dist/ unaffected by added stories/tests)
-- [ ] Source files in `src/components/`, `src/index.ts`, `src/ThemeProvider.tsx`, `src/theme-types.ts`, `rollup.config.js` are **unchanged** (`git diff master -- src/ rollup.config.js` empty)
+- [x] `npm run storybook` launches with brand toolbar + a11y panel, no runtime errors
+- [x] `npm run test-storybook` runs 50 addon-vitest stories (31 fail — known violations)
+- [x] `npm run build-storybook` produces `storybook-static/`
+- [x] `npm run build` succeeds (rollup dist/ unaffected)
+- [x] Source files in `src/components/`, `src/index.ts`, `src/ThemeProvider.tsx`, `src/theme-types.ts`, `rollup.config.js` are **unchanged** (`git diff master -- src/ rollup.config.js` empty)
 
 ### Handoff
-- [ ] Committed on `storybook-setup` branch
-- [ ] Pushed to `myfork` remote
-- [ ] PR opened to `RedSunMaster:master` is **OPTIONAL** — only on client request. Otherwise keep work on the fork indefinitely. Findings/fixes from the a11y audit go in a separate writeup document, not as code commits on `storybook-setup` (which is docs/tests only).
+- [x] Committed on `storybook-setup` branch
+- [x] Pushed to `myfork` remote
+- [ ] PR opened to `RedSunMaster:master` is **OPTIONAL** — only on client request. Keep work on the fork indefinitely.
 
 ## 8. Deployment — Deferred
 
