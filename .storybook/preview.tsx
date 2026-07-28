@@ -1,6 +1,5 @@
 import type { Preview } from '@storybook/react';
 import React from 'react';
-import { GlobalStyles } from '@mui/material';
 import { ThemeProvider } from 'ece-docs-components';
 
 type Brand = 'ECE' | 'School' | 'GP';
@@ -43,10 +42,12 @@ const preview: Preview = {
   },
   decorators: [
     (Story, context) => {
-      const brand = (context.globals.brand as Brand) || 'ECE';
+      const brand =
+        (context.globals.brand as Brand) ||
+        (typeof window !== 'undefined' && (window as any).__TEST_BRAND__) ||
+        'ECE';
       return (
         <ThemeProvider theme={brand}>
-          <GlobalStyles styles={{ body: { backgroundColor: '#FEFDF7' } }} />
           <Story />
         </ThemeProvider>
       );

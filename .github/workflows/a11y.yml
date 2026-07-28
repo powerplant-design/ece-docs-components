@@ -25,4 +25,4 @@ jobs:
       - name: Run a11y tests
         run: npx test-storybook --url http://localhost:6006 --testTimeout 30000
         env:
-          BRAND: Lightn
+          BRAND: ECE
