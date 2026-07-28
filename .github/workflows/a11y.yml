@@ -15,6 +15,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build-storybook
-      - run: npx test-storybook --url file://$(pwd)/storybook-static/index.html --testTimeout 30000
+      - name: Serve static build
+        run: npx http-server storybook-static -p 6006 --silent &
+      - name: Wait for server
+        run: npx wait-on http://localhost:6006
+      - name: Run a11y tests
+        run: npx test-storybook --url http://localhost:6006 --testTimeout 30000
         env:
           BRAND: Lightn
