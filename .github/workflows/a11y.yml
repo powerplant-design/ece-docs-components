@@ -14,11 +14,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npx playwright install --with-deps chromium
       - run: npm run build-storybook
       - name: Serve static build
-        run: npx http-server storybook-static -p 6006 --silent &
-      - name: Wait for server
-        run: npx wait-on http://localhost:6006
+        run: |
+          npx http-server storybook-static -p 6006 --silent &
+          until curl -s http://localhost:6006 > /dev/null 2>&1; do
+            sleep 1
+          done
       - name: Run a11y tests
         run: npx test-storybook --url http://localhost:6006 --testTimeout 30000
         env:
