@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
+import { within, userEvent } from 'storybook/test';
 import { Button, SimpleModal } from 'ece-docs-components';
 
 const meta = {
@@ -30,12 +31,19 @@ const SimpleModalWrapper: React.FC<{ title: string; children: React.ReactNode }>
   );
 };
 
+const openModalPlay = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement);
+  const openButton = await canvas.findByRole('button', { name: /Open Modal/i });
+  await userEvent.click(openButton);
+};
+
 export const Default: Story = {
   render: () => (
     <SimpleModalWrapper title="Confirm action">
       <p>Are you sure you want to proceed with this action?</p>
     </SimpleModalWrapper>
   ),
+  play: openModalPlay,
 };
 
 export const LongContent: Story = {
@@ -47,4 +55,5 @@ export const LongContent: Story = {
       </p>
     </SimpleModalWrapper>
   ),
+  play: openModalPlay,
 };

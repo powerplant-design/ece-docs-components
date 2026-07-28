@@ -1,8 +1,9 @@
 import type { Preview } from '@storybook/react';
 import React from 'react';
+import { GlobalStyles } from '@mui/material';
 import { ThemeProvider } from 'ece-docs-components';
 
-type Brand = 'ECE' | 'School' | 'GP' | 'Lightn';
+type Brand = 'ECE' | 'School' | 'GP';
 
 const preview: Preview = {
   parameters: {
@@ -31,10 +32,10 @@ const preview: Preview = {
         title: 'Brand',
         icon: 'circlehollow',
         items: [
-          { value: 'Lightn', title: 'Lightn (default)' },
           { value: 'ECE', title: 'ECE Docs' },
           { value: 'School', title: 'School Docs' },
           { value: 'GP', title: 'GP Docs' },
+          // { value: 'Lightn', title: 'Lightn (default)' },
         ],
         dynamicTitle: true,
       },
@@ -42,9 +43,10 @@ const preview: Preview = {
   },
   decorators: [
     (Story, context) => {
-      const brand = (context.globals.brand as Brand) || 'Lightn';
+      const brand = (context.globals.brand as Brand) || 'ECE';
       return (
         <ThemeProvider theme={brand}>
+          <GlobalStyles styles={{ body: { backgroundColor: '#FEFDF7' } }} />
           <Story />
         </ThemeProvider>
       );

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
+import { within, userEvent } from 'storybook/test';
 import { Button, Modal } from 'ece-docs-components';
 
 const meta = {
@@ -54,26 +55,38 @@ const ModalWrapper: React.FC<{ state?: string; isLoading?: boolean }> = ({
   );
 };
 
+const openModalPlay = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement);
+  const openButton = await canvas.findByRole('button', { name: /Open Modal/i });
+  await userEvent.click(openButton);
+};
+
 export const Default: Story = {
   render: () => <ModalWrapper />,
+  play: openModalPlay,
 };
 
 export const Pending: Story = {
   render: () => <ModalWrapper state="Pending" />,
+  play: openModalPlay,
 };
 
 export const ActionRequired: Story = {
   render: () => <ModalWrapper state="Action Required" />,
+  play: openModalPlay,
 };
 
 export const Declined: Story = {
   render: () => <ModalWrapper state="Declined" />,
+  play: openModalPlay,
 };
 
 export const NotStarted: Story = {
   render: () => <ModalWrapper state="Not Started" />,
+  play: openModalPlay,
 };
 
 export const Loading: Story = {
   render: () => <ModalWrapper state="Accepted" isLoading />,
+  play: openModalPlay,
 };

@@ -11,12 +11,11 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    children: [
-      <h2 key="h">Acknowledgement</h2>,
-      <p key="p">
+    children: (
+      <p>
         We acknowledge the tangata whenua of Aotearoa and honour our commitments
         under Te Tiriti o Waitangi.
-      </p>,
-    ],
+      </p>
+    ),
   },
 };

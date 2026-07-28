@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { within, userEvent } from 'storybook/test';
 import { Select } from 'ece-docs-components';
 
 const meta = {
@@ -22,6 +23,12 @@ const options = [
   { value: 'option3', label: 'Option 3' },
 ];
 
+const openDropdownPlay = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement);
+  const combobox = await canvas.findByRole('combobox');
+  await userEvent.click(combobox);
+};
+
 export const Default: Story = {
   args: {
     label: 'Choose an option',
@@ -29,10 +36,12 @@ export const Default: Story = {
     value: 'option1',
     onChange: () => {},
   },
+  play: openDropdownPlay,
 };
 
 export const WithoutLabel: Story = {
   args: { options, value: 'option2', onChange: () => {} },
+  play: openDropdownPlay,
 };
 
 export const WithError: Story = {
@@ -42,6 +51,7 @@ export const WithError: Story = {
     error: 'Please pick a valid option.',
     onChange: () => {},
   },
+  play: openDropdownPlay,
 };
 
 export const WithHelperText: Story = {
@@ -51,6 +61,7 @@ export const WithHelperText: Story = {
     helperText: 'Select the option that best fits.',
     onChange: () => {},
   },
+  play: openDropdownPlay,
 };
 
 export const Disabled: Story = {
@@ -70,4 +81,5 @@ export const FullWidth: Story = {
     fullWidth: true,
     onChange: () => {},
   },
+  play: openDropdownPlay,
 };

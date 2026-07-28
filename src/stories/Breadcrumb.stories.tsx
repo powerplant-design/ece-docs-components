@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { within, userEvent } from 'storybook/test';
 import { Breadcrumb } from 'ece-docs-components';
 
 const meta = {
@@ -26,6 +27,12 @@ const sampleDropdownItems = [
   { label: 'Self-Review and Internal Evaluation', href: '/policies/governance/self-review' },
 ];
 
+const openBreadcrumbPlay = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement);
+  const button = await canvas.findByRole('button', { name: /In this section/i });
+  await userEvent.click(button);
+};
+
 export const Default: Story = {
   args: {
     items: sampleItems,
@@ -34,6 +41,7 @@ export const Default: Story = {
     dropdownItems: sampleDropdownItems,
     onItemSelect: () => {},
   },
+  play: openBreadcrumbPlay,
 };
 
 export const NoDropdown: Story = {
@@ -55,4 +63,5 @@ export const SingleItem: Story = {
     ],
     onItemSelect: () => {},
   },
+  play: openBreadcrumbPlay,
 };

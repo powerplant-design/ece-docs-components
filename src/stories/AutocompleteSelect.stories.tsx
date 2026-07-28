@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { AutocompleteSelect, HeaderSearchResult } from 'ece-docs-components';
+import { within, userEvent } from 'storybook/test';
+import { AutocompleteSelect } from 'ece-docs-components';
 
 const meta = {
   title: 'Components/AutocompleteSelect',
@@ -24,6 +25,12 @@ const options = [
   { value: 'lightn', label: 'Lightn' },
 ];
 
+const openDropdownPlay = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const canvas = within(canvasElement);
+  const combobox = await canvas.findByRole('combobox');
+  await userEvent.click(combobox);
+};
+
 export const Default: Story = {
   args: {
     options,
@@ -32,6 +39,7 @@ export const Default: Story = {
     label: 'Choose a product',
     placeholder: 'Select…',
   },
+  play: openDropdownPlay,
 };
 
 export const WithError: Story = {
@@ -43,6 +51,7 @@ export const WithError: Story = {
     error: 'Please select a product.',
     fullWidth: true,
   },
+  play: openDropdownPlay,
 };
 
 export const WithHelperText: Story = {
@@ -54,6 +63,7 @@ export const WithHelperText: Story = {
     helperText: 'Pick the option that best fits your team.',
     fullWidth: true,
   },
+  play: openDropdownPlay,
 };
 
 export const Disabled: Story = {
